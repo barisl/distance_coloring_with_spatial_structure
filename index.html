@@ -26,6 +26,15 @@
       fill: none;
       stroke: lightgrey;
     }
+    .ring {
+      fill: none;
+      stroke: red;
+      stroke-width: 2;
+    }
+    .central-point {
+      fill: red;
+      stroke: white;
+    }
   </style>
 </head>
 <body>
@@ -37,9 +46,11 @@
 <script>
   var width = 550,
     height = 550;
+  
+  var d = 2;
 
   var data = [
-    [150, 150],
+    { x: 150, y: 150, isCentral: true },
     [260, 150],
     [340, 150],
     [425, 150],
@@ -60,7 +71,7 @@
     [325, 500]
   ];
 
-  var quadtree = d3.geom.quadtree().extent([[-1, -1], [width + 1, height + 1]])(data);
+  var quadtree = d3.geom.quadtree().extent([[-1, -1], [width + 1, height + 1]])(data.map(d => [d.x || d[0], d.y || d[1]]));
 
   var svg = d3.select("svg");
 
@@ -76,10 +87,22 @@
   var point = svg.selectAll(".point")
     .data(data)
     .enter().append("circle")
-    .attr("class", "point")
-    .attr("cx", function(d) { return d[0]; })
-    .attr("cy", function(d) { return d[1]; })
-    .attr("r", 3);
+    .attr("class", function(d) { return d.isCentral ? "point central-point" : "point"; })
+    .attr("cx", function(d) { return d.x || d[0]; })
+    .attr("cy", function(d) { return d.y || d[1]; })
+    .attr("r", function(d) { return d.isCentral ? 5 : 3; });
+
+  var ringRadius = calculateRingRadius(data[0], data[d]);
+
+  var ring = svg.append("circle")
+    .attr("class", "ring")
+    .attr("cx", data[0].x || data[0][0])
+    .attr("cy", data[0].y || data[0][1])
+    .attr("r", ringRadius);
+
+  function calculateRingRadius(point1, point2) {
+    return Math.sqrt(Math.pow(point1.x || point1[0] - point2[0], 2) + Math.pow(point1.y || point1[1] - point2[1], 2));
+  }
 
   function nodes(quadtree) {
     var nodes = [];
