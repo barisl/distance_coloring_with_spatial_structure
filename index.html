@@ -46,32 +46,33 @@
 <script>
   var width = 550,
     height = 550;
-  
+
   var d = 2;
 
   var data = [
-    { x: 150, y: 150, isCentral: true },
-    [260, 150],
-    [340, 150],
-    [425, 150],
-    [75, 225],
-    [325, 225],
-    [150, 250],
-    [300, 285],
-    [385, 285],
-    [125, 300],
-    [450, 325],
-    [155, 400],
-    [260, 375],
-    [325, 385],
-    [375, 390],
-    [75, 425],
-    [145, 490],
-    [275, 500],
-    [325, 500]
+    {x: 150, y: 150},
+    {x: 260, y: 150},
+    {x: 340, y: 150},
+    {x: 425, y: 150},
+    {x: 75, y: 225},
+    {x: 325, y: 225},
+    {x: 150, y: 250},
+    {x: 300, y: 285},
+    {x: 385, y: 285},
+    {x: 125, y: 300},
+    {x: 450, y: 325},
+    {x: 155, y: 400},
+    {x: 260, y: 375},
+    {x: 325, y: 385},
+    {x: 375, y: 390},
+    {x: 75, y: 425},
+    {x: 145, y: 490},
+    {x: 275, y: 500},
+    {x: 325, y: 500}
   ];
-
-  var quadtree = d3.geom.quadtree().extent([[-1, -1], [width + 1, height + 1]])(data.map(d => [d.x || d[0], d.y || d[1]]));
+  var selectedPoint = data[0];
+  selectedPoint.isCentral = true;
+  var quadtree = d3.geom.quadtree().extent([[-1, -1], [width + 1, height + 1]])(data.map(d => [d.x, d.y]));
 
   var svg = d3.select("svg");
 
@@ -88,20 +89,22 @@
     .data(data)
     .enter().append("circle")
     .attr("class", function(d) { return d.isCentral ? "point central-point" : "point"; })
-    .attr("cx", function(d) { return d.x || d[0]; })
-    .attr("cy", function(d) { return d.y || d[1]; })
+    .attr("cx", function(d) { return d.x; })
+    .attr("cy", function(d) { return d.y; })
     .attr("r", function(d) { return d.isCentral ? 5 : 3; });
 
-  var ringRadius = calculateRingRadius(data[0], data[d]);
+  var ringRadius = calculateRingRadius(selectedPoint, d);
 
   var ring = svg.append("circle")
     .attr("class", "ring")
-    .attr("cx", data[0].x || data[0][0])
-    .attr("cy", data[0].y || data[0][1])
+    .attr("cx", selectedPoint.x)
+    .attr("cy", selectedPoint.y)
     .attr("r", ringRadius);
 
-  function calculateRingRadius(point1, point2) {
-    return Math.sqrt(Math.pow(point1.x || point1[0] - point2[0], 2) + Math.pow(point1.y || point1[1] - point2[1], 2));
+  function calculateRingRadius(point, d) {
+    var deltaX = d * ((width + d*d) / 8);
+    var deltaY = d * ((height + d*d) / 8);
+    return Math.sqrt(Math.pow(deltaX, 2) + Math.pow(deltaY, 2));
   }
 
   function nodes(quadtree) {
