@@ -100,15 +100,17 @@
     .attr("r", function (d) {return d.isCentral ? 5 : 3;});
 
   var index = 0;
-  var currentPoint = null;
+  var prevPoint = null;
 
   var button = document.getElementById('drawNext');
   button.addEventListener('click', drawNextCircle);
 
   function drawNextCircle() {
-    if (currentPoint) {
-      currentPoint.point.remove();
-      currentPoint.ring.remove();
+    if (prevPoint) {
+      prevPoint.point.remove();
+      prevPoint.ring.remove();
+      svg.selectAll(".neighbor-point").remove();
+      svg.selectAll(".central-point").remove();
     }
     var selectedPoint = data[index];
     var point = svg.append("circle")
@@ -125,13 +127,29 @@
       .attr("cx", selectedPoint.x)
       .attr("cy", selectedPoint.y)
       .attr("r", ringRadius);
-    
+
+    data.forEach(function(d) {
+      if (distance(selectedPoint, d) <= ringRadius) {
+        svg.append("circle")
+                .attr("class", "point neighbor-point")
+                .attr("cx", d.x)
+                .attr("cy", d.y)
+                .attr("r", 3);
+        if(selectedPoint == d){
+          svg.append("circle")
+                  .attr("class", "point central-point")
+                  .attr("cx", selectedPoint.x)
+                  .attr("cy", selectedPoint.y)
+                  .attr("r", 5);
+        }
+      }
+    });
 
     index++;
     if (index >= data.length) {
       index = 0;
     }
-    currentPoint = {
+    prevPoint = {
       point: point,
       ring: ring
     };
