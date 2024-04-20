@@ -42,6 +42,10 @@
       fill: blue;
       stroke: white;
     }
+    .intersect-point {
+      fill: orange;
+      stroke: white;
+    }
     #drawNext {
       margin-top: 20px;
     }
@@ -61,25 +65,25 @@
   var d = 2;
 
   var data = [
-    {x: 150, y: 150},
-    {x: 260, y: 150},
-    {x: 340, y: 150},
-    {x: 425, y: 150},
-    {x: 75, y: 225},
-    {x: 325, y: 225},
-    {x: 150, y: 250},
-    {x: 300, y: 285},
-    {x: 385, y: 285},
-    {x: 125, y: 300},
-    {x: 450, y: 325},
-    {x: 155, y: 400},
-    {x: 260, y: 375},
-    {x: 325, y: 385},
-    {x: 375, y: 390},
-    {x: 75, y: 425},
-    {x: 145, y: 490},
-    {x: 275, y: 500},
-    {x: 325, y: 500}
+    {x: 150, y: 150}, // 1
+    {x: 260, y: 150}, // 2
+    {x: 340, y: 150}, // 3
+    {x: 425, y: 150}, // 4
+    {x: 75, y: 225}, // 5
+    {x: 325, y: 225}, // 6
+    {x: 150, y: 250}, // 7
+    {x: 300, y: 285}, // 8
+    {x: 385, y: 285}, // 9
+    {x: 125, y: 300}, // 10
+    {x: 450, y: 325}, // 11
+    {x: 155, y: 400}, // 12
+    {x: 260, y: 375}, // 13
+    {x: 325, y: 385}, // 14
+    {x: 375, y: 390}, // 15
+    {x: 75, y: 425}, // 16
+    {x: 145, y: 490}, // 17
+    {x: 275, y: 500}, // 18
+    {x: 325, y: 500} // 19
   ];
   var quadtree = d3.geom.quadtree().extent([[-1, -1], [width + 1, height + 1]])(data.map(d => [d.x, d.y]));
 
@@ -113,41 +117,52 @@
       prevPoint.ring.remove();
       svg.selectAll(".neighbor-point").remove();
       svg.selectAll(".central-point").remove();
+      svg.selectAll(".intersect-point").remove();
     }
     var selectedPoint = data[index];
     var point = svg.append("circle")
-      .attr("class", "point central-point")
-      .attr("cx", selectedPoint.x)
-      .attr("cy", selectedPoint.y)
-      .attr("r", 5);
-
+            .attr("class", "point central-point")
+            .attr("cx", selectedPoint.x)
+            .attr("cy", selectedPoint.y)
+            .attr("r", 5);
 
     var ringRadius = calculateRingRadius(selectedPoint, d);
 
     var ring = svg.append("circle")
-      .attr("class", "ring")
-      .attr("cx", selectedPoint.x)
-      .attr("cy", selectedPoint.y)
-      .attr("r", ringRadius);
+            .attr("class", "ring")
+            .attr("cx", selectedPoint.x)
+            .attr("cy", selectedPoint.y)
+            .attr("r", ringRadius);
 
-    data.forEach(function(d) {
-      const quad = quadtree.find(d.x, d.y)
-      console.log("Punkt: ", d, "Quadrant: " ,quad);
-      if (distance(selectedPoint, d) <= ringRadius) {
-        svg.append("circle")
-                .attr("class", "point neighbor-point")
-                .attr("cx", d.x)
-                .attr("cy", d.y)
-                .attr("r", 3);
-        console.log(d);
-        if(selectedPoint == d){
+    quadtree.visit(function(quad, x1, y1, x2, y2) {
+      if (quad.point && (quad.point !== selectedPoint)) {
+        var quadPoint = quad.point;
+        var quadPointX = quadPoint[0];
+        var quadPointY = quadPoint[1];
+        var dist = distance(selectedPoint, { x: quadPointX, y: quadPointY });
+
+        if (dist <= ringRadius) {
           svg.append("circle")
-                  .attr("class", "point central-point")
-                  .attr("cx", selectedPoint.x)
-                  .attr("cy", selectedPoint.y)
-                  .attr("r", 5);
+                  .attr("class", "point neighbor-point")
+                  .attr("cx", quadPointX)
+                  .attr("cy", quadPointY)
+                  .attr("r", 3);
+        }
+        else if (quad.x1 < selectedPoint.x + ringRadius &&
+                 quad.y1 < selectedPoint.y + ringRadius &&
+                 quad.x2 > selectedPoint.x - ringRadius &&
+                 quad.y2 > selectedPoint.y - ringRadius)
+        {
+          svg.append("circle")
+                  .attr("class", "point intersect-point")
+                  .attr("cx", quadPointX)
+                  .attr("cy", quadPointY)
+                  .attr("r", 3);
+          console.log("Punkt außerhalb des Rings, aber Quadrant schneidet den Ring: ", quadPoint);
         }
       }
+      return x1 >= selectedPoint.x + ringRadius || x2 <= selectedPoint.x - ringRadius ||
+              y1 >= selectedPoint.y + ringRadius || y2 <= selectedPoint.y - ringRadius;
     });
 
     index++;
@@ -159,6 +174,7 @@
       ring: ring
     };
   }
+
   function distance(point1, point2) {
     var dx = point1.x - point2.x;
     var dy = point1.y - point2.y;
