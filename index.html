@@ -8,6 +8,7 @@
     body, html {
       height: 100%;
       margin: 0;
+      background: black;
     }
     .container {
       display: flex;
@@ -18,6 +19,7 @@
     }
     svg {
       border: 1px solid black;
+      background: grey;
     }
     .point {
       fill: darkgrey;
@@ -129,12 +131,15 @@
       .attr("r", ringRadius);
 
     data.forEach(function(d) {
+      const quad = quadtree.find(d.x, d.y)
+      console.log("Punkt: ", d, "Quadrant: " ,quad);
       if (distance(selectedPoint, d) <= ringRadius) {
         svg.append("circle")
                 .attr("class", "point neighbor-point")
                 .attr("cx", d.x)
                 .attr("cy", d.y)
                 .attr("r", 3);
+        console.log(d);
         if(selectedPoint == d){
           svg.append("circle")
                   .attr("class", "point central-point")
@@ -162,7 +167,7 @@
   function calculateRingRadius(point, d) {
     var deltaX = d * ((width + d*d) / 8);
     var deltaY = d * ((height + d*d) / 8);
-    return Math.sqrt(Math.pow(deltaX, 2) + Math.pow(deltaY, 2));
+    return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
   }
 
   function nodes(quadtree) {
@@ -174,7 +179,7 @@
       node.x2 = x2;
       node.y2 = y2;
       nodes.push(node);
-      for (var i=0; i<4; i++) {
+      for (var i=0; i<data.length; i++) {
         if (node.nodes[i]) node.nodes[i].depth = node.depth+1;
       }
     });
