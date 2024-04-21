@@ -139,7 +139,11 @@
         var quadPoint = quad.point;
         var quadPointX = quadPoint[0];
         var quadPointY = quadPoint[1];
-        var dist = distance(selectedPoint, { x: quadPointX, y: quadPointY });
+        var dist_upperleft = distance(selectedPoint, {x: quad.x1, y: quad.y1});
+        var dist_lowerright = distance(selectedPoint, {x: quad.x2, y: quad.y2});
+        var dist_upperright = distance(selectedPoint, {x: quad.x2, y: quad.y1});
+        var dist_lowerleft = distance(selectedPoint, {x: quad.x1, y: quad.y2});
+        var dist = distance(selectedPoint, {x:quadPointX, y:quadPointY});
 
         if (dist <= ringRadius) {
           svg.append("circle")
@@ -148,10 +152,7 @@
                   .attr("cy", quadPointY)
                   .attr("r", 3);
         }
-        else if (quad.x1 < selectedPoint.x + ringRadius &&
-                 quad.y1 < selectedPoint.y + ringRadius &&
-                 quad.x2 > selectedPoint.x - ringRadius &&
-                 quad.y2 > selectedPoint.y - ringRadius)
+        else if (dist_upperleft <= ringRadius || dist_lowerright <= ringRadius || dist_upperright <= ringRadius || dist_lowerleft <= ringRadius)
         {
           svg.append("circle")
                   .attr("class", "point intersect-point")
@@ -159,6 +160,14 @@
                   .attr("cy", quadPointY)
                   .attr("r", 3);
           console.log("Punkt außerhalb des Rings, aber Quadrant schneidet den Ring: ", quadPoint);
+          console.log("quad.x1:", quad.x1,"quad.y1:", quad.y1,"quad.x2:", quad.x2,"quad.y2:", quad.y2);
+          console.log("SelectedPointX: ", selectedPoint.x);
+          console.log("SelectedPointY: ", selectedPoint.y);
+          console.log("Ringradius: ", ringRadius);
+          console.log("Ringradius + SelectedPointX: ", ringRadius + selectedPoint.x);
+          console.log("Ringradius + SelectedPointY: ", ringRadius + selectedPoint.y);
+          console.log("Ringradius - SelectedPointX: ", ringRadius - selectedPoint.x);
+          console.log("Ringradius - SelectedPointY: ", ringRadius - selectedPoint.y);
         }
       }
       return x1 >= selectedPoint.x + ringRadius || x2 <= selectedPoint.x - ringRadius ||
@@ -181,8 +190,8 @@
     return Math.sqrt(dx * dx + dy * dy);
   }
   function calculateRingRadius(point, d) {
-    var deltaX = d * ((width + d*d) / 8);
-    var deltaY = d * ((height + d*d) / 8);
+    var deltaX = d * ((width + d*d) / 7);
+    var deltaY = d * ((height + d*d) / 7);
     return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
   }
 
