@@ -62,7 +62,7 @@
   var width = 550,
     height = 550;
 
-  var d = 2;
+  var d = 1;
 
   var data = [
     {x: 150, y: 150}, // 1
@@ -112,6 +112,8 @@
   button.addEventListener('click', drawNextCircle);
 
   function drawNextCircle() {
+    var results = [];
+
     if (prevPoint) {
       prevPoint.point.remove();
       prevPoint.ring.remove();
@@ -124,7 +126,7 @@
             .attr("class", "point central-point")
             .attr("cx", selectedPoint.x)
             .attr("cy", selectedPoint.y)
-            .attr("r", 5);
+            .attr("r", 5)
 
     var ringRadius = calculateRingRadius(selectedPoint, d);
 
@@ -135,7 +137,7 @@
             .attr("r", ringRadius);
 
     quadtree.visit(function(quad, x1, y1, x2, y2) {
-      if (quad.point && (quad.point !== selectedPoint)) {
+      if (quad.point) {
         var quadPoint = quad.point;
         var quadPointX = quadPoint[0];
         var quadPointY = quadPoint[1];
@@ -145,30 +147,34 @@
         var dist_lowerleft = distance(selectedPoint, {x: quad.x1, y: quad.y2});
         var dist = distance(selectedPoint, {x:quadPointX, y:quadPointY});
 
-        if (dist <= ringRadius) {
+        if (dist <= ringRadius && dist != 0) {
+          console.log("von: ", selectedPoint, "nach: ",quadPoint, "dist: ",dist);
           svg.append("circle")
                   .attr("class", "point neighbor-point")
                   .attr("cx", quadPointX)
                   .attr("cy", quadPointY)
                   .attr("r", 3);
+            results.push(quadPoint);
         }
-        else if (dist_upperleft <= ringRadius || dist_lowerright <= ringRadius || dist_upperright <= ringRadius || dist_lowerleft <= ringRadius)
+        else if ((dist_upperleft <= ringRadius || dist_lowerright <= ringRadius || dist_upperright <= ringRadius || dist_lowerleft <= ringRadius) && dist != 0)
         {
           svg.append("circle")
                   .attr("class", "point intersect-point")
                   .attr("cx", quadPointX)
                   .attr("cy", quadPointY)
                   .attr("r", 3);
-          console.log("Punkt außerhalb des Rings, aber Quadrant schneidet den Ring: ", quadPoint);
-          console.log("quad.x1:", quad.x1,"quad.y1:", quad.y1,"quad.x2:", quad.x2,"quad.y2:", quad.y2);
-          console.log("SelectedPointX: ", selectedPoint.x);
-          console.log("SelectedPointY: ", selectedPoint.y);
-          console.log("Ringradius: ", ringRadius);
-          console.log("Ringradius + SelectedPointX: ", ringRadius + selectedPoint.x);
-          console.log("Ringradius + SelectedPointY: ", ringRadius + selectedPoint.y);
-          console.log("Ringradius - SelectedPointX: ", ringRadius - selectedPoint.x);
-          console.log("Ringradius - SelectedPointY: ", ringRadius - selectedPoint.y);
+          results.push(quadPoint);
+          // console.log("Punkt außerhalb des Rings, aber Quadrant schneidet den Ring: ", quadPoint);
+          // console.log("quad.x1:", quad.x1,"quad.y1:", quad.y1,"quad.x2:", quad.x2,"quad.y2:", quad.y2);
+          // console.log("SelectedPointX: ", selectedPoint.x);
+          // console.log("SelectedPointY: ", selectedPoint.y);
+          // console.log("Ringradius: ", ringRadius);
+          // console.log("Ringradius + SelectedPointX: ", ringRadius + selectedPoint.x);
+          // console.log("Ringradius + SelectedPointY: ", ringRadius + selectedPoint.y);
+          // console.log("Ringradius - SelectedPointX: ", ringRadius - selectedPoint.x);
+          // console.log("Ringradius - SelectedPointY: ", ringRadius - selectedPoint.y);
         }
+        console.log(results);
       }
       return x1 >= selectedPoint.x + ringRadius || x2 <= selectedPoint.x - ringRadius ||
               y1 >= selectedPoint.y + ringRadius || y2 <= selectedPoint.y - ringRadius;
