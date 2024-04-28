@@ -61,33 +61,19 @@
 <script>
   var width = 550,
     height = 550;
-
+  var svg,quadtree;
+  var data = [];
   var d = 1;
 
-  var data = [
-    {x: 150, y: 150}, // 1
-    {x: 260, y: 150}, // 2
-    {x: 340, y: 150}, // 3
-    {x: 425, y: 150}, // 4
-    {x: 75, y: 225}, // 5
-    {x: 325, y: 225}, // 6
-    {x: 150, y: 250}, // 7
-    {x: 300, y: 285}, // 8
-    {x: 385, y: 285}, // 9
-    {x: 125, y: 300}, // 10
-    {x: 450, y: 325}, // 11
-    {x: 155, y: 400}, // 12
-    {x: 260, y: 375}, // 13
-    {x: 325, y: 385}, // 14
-    {x: 375, y: 390}, // 15
-    {x: 75, y: 425}, // 16
-    {x: 145, y: 490}, // 17
-    {x: 275, y: 500}, // 18
-    {x: 325, y: 500} // 19
-  ];
-  var quadtree = d3.geom.quadtree().extent([[-1, -1], [width + 1, height + 1]])(data.map(d => [d.x, d.y]));
+  d3.csv("graph.csv", function(csvData) {
+    csvData.forEach(function(d) {
+        data.push({vertex: d.vertex, x: +d.x, y: +d.y})
+    });
 
-  var svg = d3.select("svg");
+  console.log(data);
+  quadtree = d3.geom.quadtree().extent([[-1, -1], [width + 1, height + 1]])(data.map(d => [d.x, d.y]));
+
+  svg = d3.select("svg");
 
   var rect = svg.selectAll(".node")
     .data(nodes(quadtree))
@@ -104,13 +90,17 @@
     .attr("cx", function (d) {return d.x;})
     .attr("cy", function (d) {return d.y;})
     .attr("r", function (d) {return d.isCentral ? 5 : 3;});
-
+  });
   var index = 0;
   var prevPoint = null;
 
   var button = document.getElementById('drawNext');
   button.addEventListener('click', drawNextCircle);
 
+  for(var i=0; i < data.length; i++){
+
+
+  }
   function drawNextCircle() {
     var results = [];
 
@@ -179,7 +169,6 @@
       return x1 >= selectedPoint.x + ringRadius || x2 <= selectedPoint.x - ringRadius ||
               y1 >= selectedPoint.y + ringRadius || y2 <= selectedPoint.y - ringRadius;
     });
-
     index++;
     if (index >= data.length) {
       index = 0;
