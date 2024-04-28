@@ -46,6 +46,10 @@
       fill: orange;
       stroke: white;
     }
+    .edge {
+      stroke: green;
+      stroke-width: 2;
+    }
     #drawNext {
       margin-top: 20px;
     }
@@ -61,16 +65,44 @@
 <script>
   var width = 550,
     height = 550;
-  var svg,quadtree;
+  var svg,quadtree,longestEdgeLength;
   var data = [];
-  var d = 1;
+  var edges = [];
+  var d = 2;
 
   d3.csv("graph.csv", function(csvData) {
+    let isSourceTarget = false;
     csvData.forEach(function(d) {
-        data.push({vertex: d.vertex, x: +d.x, y: +d.y})
+      if(!isSourceTarget) {
+        if(d.vertex == "source"){
+          isSourceTarget = true;
+        } else {
+          data.push({ vertex: d.vertex, x: +d.x, y: +d.y });
+        }
+      } else {
+        edges.push({ source: d.vertex, target: d.x });
+      }
     });
+    longestEdgeLength = 0;
+    var longestEdge = null;
 
-  console.log(data);
+    for (var i = 0; i < edges.length; i++) {
+      var edge = edges[i];
+      var sourceNode = data.find(function (node) {
+        return node.vertex === edge.source;
+      });
+      var targetNode = data.find(function (node) {
+        return node.vertex === edge.target;
+      });
+      var edgeLength = distance(sourceNode, targetNode);
+      console.log("source: ", sourceNode, "target: ", targetNode, "Length: ", edgeLength)
+      if (edgeLength > longestEdgeLength) {
+        longestEdgeLength = edgeLength;
+        longestEdge = edge
+      }
+    }
+    console.log(longestEdge,longestEdgeLength)
+
   quadtree = d3.geom.quadtree().extent([[-1, -1], [width + 1, height + 1]])(data.map(d => [d.x, d.y]));
 
   svg = d3.select("svg");
@@ -83,13 +115,25 @@
     .attr("y", function(d) { return d.y1; })
     .attr("width", function(d) { return d.x2 - d.x1; })
     .attr("height", function(d) { return d.y2 - d.y1; });
+    edges.forEach(function(edge) {
+      var sourceNode = data.find(function(node) { return node.vertex === edge.source; });
+      var targetNode = data.find(function(node) { return node.vertex === edge.target; });
+      if (sourceNode && targetNode) {
+        svg.append("line")
+                .attr("class", "edge")
+                .attr("x1", sourceNode.x)
+                .attr("y1", sourceNode.y)
+                .attr("x2", targetNode.x)
+                .attr("y2", targetNode.y);
+      }
+    });
   var point = svg.selectAll(".point")
     .data(data)
     .enter().append("circle")
-    .attr("class", function (d) {return d.isCentral ? "point central-point" : "point";})
+    .attr("class","point")
     .attr("cx", function (d) {return d.x;})
     .attr("cy", function (d) {return d.y;})
-    .attr("r", function (d) {return d.isCentral ? 5 : 3;});
+    .attr("r", 3);
   });
   var index = 0;
   var prevPoint = null;
@@ -103,6 +147,8 @@
   }
   function drawNextCircle() {
     var results = [];
+
+    svg.selectAll("line").remove();
 
     if (prevPoint) {
       prevPoint.point.remove();
@@ -138,7 +184,7 @@
         var dist = distance(selectedPoint, {x:quadPointX, y:quadPointY});
 
         if (dist <= ringRadius && dist != 0) {
-          console.log("von: ", selectedPoint, "nach: ",quadPoint, "dist: ",dist);
+         // console.log("von: ", selectedPoint, "nach: ",quadPoint, "dist: ",dist);
           svg.append("circle")
                   .attr("class", "point neighbor-point")
                   .attr("cx", quadPointX)
@@ -185,11 +231,10 @@
     return Math.sqrt(dx * dx + dy * dy);
   }
   function calculateRingRadius(point, d) {
-    var deltaX = d * ((width + d*d) / 7);
-    var deltaY = d * ((height + d*d) / 7);
+    var deltaX = d * (longestEdgeLength/2);
+    var deltaY = d * (longestEdgeLength/2);
     return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
   }
-
   function nodes(quadtree) {
     var nodes = [];
     quadtree.depth = 0;
