@@ -1,255 +1,250 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Quadtree - Distance coloring</title>
-  <style>
-    body, html {
-      height: 100%;
-      margin: 0;
-      background: black;
-    }
-    .container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-    }
-    svg {
-      border: 1px solid black;
-      background: grey;
-    }
-    .point {
-      fill: darkgrey;
-      stroke: white;
-    }
-    .node {
-      fill: none;
-      stroke: lightgrey;
-    }
-    .ring {
-      fill: none;
-      stroke: red;
-      stroke-width: 2;
-    }
-    .central-point {
-      fill: red;
-      stroke: white;
-    }
-    .neighbor-point {
-      fill: blue;
-      stroke: white;
-    }
-    .intersect-point {
-      fill: orange;
-      stroke: white;
-    }
-    .edge {
-      stroke: green;
-      stroke-width: 2;
-    }
-    #drawNext {
-      margin-top: 20px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quadtree - Distance coloring</title>
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            background: black;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+        svg {
+            border: 1px solid black;
+            background: grey;
+            display: block;
+            margin: auto;
+        }
+        .point {
+            fill: darkgrey;
+            stroke: white;
+        }
+        .node {
+            fill: none;
+            stroke: lightgrey;
+        }
+        .ring {
+            fill: none;
+            stroke: red;
+            stroke-width: 2;
+        }
+        .central-point {
+            fill: red;
+            stroke: white;
+        }
+        .neighbor-point {
+            fill: blue;
+            stroke: white;
+        }
+        .intersect-point {
+            fill: orange;
+            stroke: white;
+        }
+        .edge {
+            stroke: green;
+            stroke-width: 2;
+        }
+        #drawNext {
+            margin-top: 20px;
+        }
+    </style>
 </head>
 <body>
 <div class="container">
-  <svg width="550" height="550"></svg>
-  <button id="drawNext">Klick</button>
+    <svg id="svg-container" transform="scale(1,-1)"></svg>
+    <button id="drawNext">Klick</button>
+
 </div>
 
 <script src="https://d3js.org/d3.v3.min.js"></script>
 <script>
-  var width = 550,
-    height = 550;
-  var svg,quadtree,longestEdgeLength;
-  var data = [];
-  var edges = [];
-  var d = 2;
+    var svg,quadtree,longestEdgeLength;
+    var data = [];
+    var edges = [];
+    var d = 2;
 
-  d3.csv("graph.csv", function(csvData) {
-    let isSourceTarget = false;
-    csvData.forEach(function(d) {
-      if(!isSourceTarget) {
-        if(d.vertex == "source"){
-          isSourceTarget = true;
-        } else {
-          data.push({ vertex: d.vertex, x: +d.x, y: +d.y });
+    d3.csv("minnesota.csv", function(csvData) {
+        let isSourceTarget = false;
+        csvData.forEach(function(d) {
+            if(!isSourceTarget) {
+                if(d.vertex == "source"){
+                    isSourceTarget = true;
+                } else {
+                    data.push({ vertex: d.vertex, x: +d.x, y: +d.y });
+                }
+            } else {
+                edges.push({ source: d.vertex, target: d.x });
+            }
+        });
+        longestEdgeLength = 0;
+        var longestEdge = null;
+
+        for (var i = 0; i < edges.length; i++) {
+            var edge = edges[i];
+            var sourceNode = data.find(function (node) {
+                return node.vertex === edge.source;
+            });
+            var targetNode = data.find(function (node) {
+                return node.vertex === edge.target;
+            });
+            var edgeLength = distance(sourceNode, targetNode);
+            if (edgeLength > longestEdgeLength) {
+                longestEdgeLength = edgeLength;
+                longestEdge = edge
+            }
         }
-      } else {
-        edges.push({ source: d.vertex, target: d.x });
-      }
+        console.log(longestEdge,longestEdgeLength)
+        minX = d3.min(data, function(d) { return d.x; });
+        minY = d3.min(data, function(d) { return d.y; });
+        maxX = d3.max(data, function(d) { return d.x; });
+        maxY = d3.max(data, function(d) { return d.y; });
+        var width = maxX - minX;
+        var height = maxY - minY;
+
+
+        quadtree = d3.geom.quadtree().extent([[-1, -1], [width + 1, height + 1]])(data.map(d => [d.x, d.y]));
+
+        svg = d3.select("#svg-container")
+            .attr("width", width)
+            .attr("height", height)
+
+        var rect = svg.selectAll(".node")
+            .data(nodes(quadtree))
+            .enter().append("rect")
+            .attr("class", "node")
+            .attr("x", function(d) { return d.x1; })
+            .attr("y", function(d) { return d.y1; })
+            .attr("width", function(d) { return d.x2 - d.x1; })
+            .attr("height", function(d) { return d.y2 - d.y1; });
+        edges.forEach(function(edge) {
+            var sourceNode = data.find(function(node) { return node.vertex === edge.source; });
+            var targetNode = data.find(function(node) { return node.vertex === edge.target; });
+            if (sourceNode && targetNode) {
+                svg.append("line")
+                    .attr("class", "edge")
+                    .attr("x1", sourceNode.x)
+                    .attr("y1", sourceNode.y)
+                    .attr("x2", targetNode.x)
+                    .attr("y2", targetNode.y);
+            }
+        });
+        var point = svg.selectAll(".point")
+            .data(data)
+            .enter().append("circle")
+            .attr("class","point")
+            .attr("cx", function (d) {return d.x;})
+            .attr("cy", function (d) {return d.y;})
+            .attr("r", 3);
     });
-    longestEdgeLength = 0;
-    var longestEdge = null;
+    var index = 0;
+    var prevPoint = null;
 
-    for (var i = 0; i < edges.length; i++) {
-      var edge = edges[i];
-      var sourceNode = data.find(function (node) {
-        return node.vertex === edge.source;
-      });
-      var targetNode = data.find(function (node) {
-        return node.vertex === edge.target;
-      });
-      var edgeLength = distance(sourceNode, targetNode);
-      console.log("source: ", sourceNode, "target: ", targetNode, "Length: ", edgeLength)
-      if (edgeLength > longestEdgeLength) {
-        longestEdgeLength = edgeLength;
-        longestEdge = edge
-      }
-    }
-    console.log(longestEdge,longestEdgeLength)
+    var button = document.getElementById('drawNext');
+    button.addEventListener('click', drawNextCircle);
 
-  quadtree = d3.geom.quadtree().extent([[-1, -1], [width + 1, height + 1]])(data.map(d => [d.x, d.y]));
+    function drawNextCircle() {
+        var results = [];
 
-  svg = d3.select("svg");
+        svg.selectAll("line").remove();
 
-  var rect = svg.selectAll(".node")
-    .data(nodes(quadtree))
-    .enter().append("rect")
-    .attr("class", "node")
-    .attr("x", function(d) { return d.x1; })
-    .attr("y", function(d) { return d.y1; })
-    .attr("width", function(d) { return d.x2 - d.x1; })
-    .attr("height", function(d) { return d.y2 - d.y1; });
-    edges.forEach(function(edge) {
-      var sourceNode = data.find(function(node) { return node.vertex === edge.source; });
-      var targetNode = data.find(function(node) { return node.vertex === edge.target; });
-      if (sourceNode && targetNode) {
-        svg.append("line")
-                .attr("class", "edge")
-                .attr("x1", sourceNode.x)
-                .attr("y1", sourceNode.y)
-                .attr("x2", targetNode.x)
-                .attr("y2", targetNode.y);
-      }
-    });
-  var point = svg.selectAll(".point")
-    .data(data)
-    .enter().append("circle")
-    .attr("class","point")
-    .attr("cx", function (d) {return d.x;})
-    .attr("cy", function (d) {return d.y;})
-    .attr("r", 3);
-  });
-  var index = 0;
-  var prevPoint = null;
-
-  var button = document.getElementById('drawNext');
-  button.addEventListener('click', drawNextCircle);
-
-  for(var i=0; i < data.length; i++){
-
-
-  }
-  function drawNextCircle() {
-    var results = [];
-
-    svg.selectAll("line").remove();
-
-    if (prevPoint) {
-      prevPoint.point.remove();
-      prevPoint.ring.remove();
-      svg.selectAll(".neighbor-point").remove();
-      svg.selectAll(".central-point").remove();
-      svg.selectAll(".intersect-point").remove();
-    }
-    var selectedPoint = data[index];
-    var point = svg.append("circle")
+        if (prevPoint) {
+            prevPoint.point.remove();
+            prevPoint.ring.remove();
+            svg.selectAll(".neighbor-point").remove();
+            svg.selectAll(".central-point").remove();
+            svg.selectAll(".intersect-point").remove();
+        }
+        var selectedPoint = data[index];
+        var point = svg.append("circle")
             .attr("class", "point central-point")
             .attr("cx", selectedPoint.x)
             .attr("cy", selectedPoint.y)
             .attr("r", 5)
 
-    var ringRadius = calculateRingRadius(selectedPoint, d);
+        var ringRadius = calculateRingRadius(selectedPoint, d);
 
-    var ring = svg.append("circle")
+        var ring = svg.append("circle")
             .attr("class", "ring")
             .attr("cx", selectedPoint.x)
             .attr("cy", selectedPoint.y)
             .attr("r", ringRadius);
 
-    quadtree.visit(function(quad, x1, y1, x2, y2) {
-      if (quad.point) {
-        var quadPoint = quad.point;
-        var quadPointX = quadPoint[0];
-        var quadPointY = quadPoint[1];
-        var dist_upperleft = distance(selectedPoint, {x: quad.x1, y: quad.y1});
-        var dist_lowerright = distance(selectedPoint, {x: quad.x2, y: quad.y2});
-        var dist_upperright = distance(selectedPoint, {x: quad.x2, y: quad.y1});
-        var dist_lowerleft = distance(selectedPoint, {x: quad.x1, y: quad.y2});
-        var dist = distance(selectedPoint, {x:quadPointX, y:quadPointY});
+        quadtree.visit(function(quad, x1, y1, x2, y2) {
+            if (quad.point) {
+                var quadPoint = quad.point;
+                var quadPointX = quadPoint[0];
+                var quadPointY = quadPoint[1];
+                var dist_upperleft = distance(selectedPoint, {x: quad.x1, y: quad.y1});
+                var dist_lowerright = distance(selectedPoint, {x: quad.x2, y: quad.y2});
+                var dist_upperright = distance(selectedPoint, {x: quad.x2, y: quad.y1});
+                var dist_lowerleft = distance(selectedPoint, {x: quad.x1, y: quad.y2});
+                var dist = distance(selectedPoint, {x:quadPointX, y:quadPointY});
 
-        if (dist <= ringRadius && dist != 0) {
-         // console.log("von: ", selectedPoint, "nach: ",quadPoint, "dist: ",dist);
-          svg.append("circle")
-                  .attr("class", "point neighbor-point")
-                  .attr("cx", quadPointX)
-                  .attr("cy", quadPointY)
-                  .attr("r", 3);
-            results.push(quadPoint);
+                if (dist <= ringRadius && dist != 0) {
+                    svg.append("circle")
+                        .attr("class", "point neighbor-point")
+                        .attr("cx", quadPointX)
+                        .attr("cy", quadPointY)
+                        .attr("r", 3);
+                    results.push(quadPoint);
+                }
+                else if ((dist_upperleft <= ringRadius || dist_lowerright <= ringRadius || dist_upperright <= ringRadius || dist_lowerleft <= ringRadius) && dist != 0)
+                {
+                    svg.append("circle")
+                        .attr("class", "point intersect-point")
+                        .attr("cx", quadPointX)
+                        .attr("cy", quadPointY)
+                        .attr("r", 3);
+                    results.push(quadPoint);
+                }
+                console.log(results);
+            }
+            return x1 >= selectedPoint.x + ringRadius || x2 <= selectedPoint.x - ringRadius ||
+                y1 >= selectedPoint.y + ringRadius || y2 <= selectedPoint.y - ringRadius;
+        });
+        index++;
+        if (index >= data.length) {
+            index = 0;
         }
-        else if ((dist_upperleft <= ringRadius || dist_lowerright <= ringRadius || dist_upperright <= ringRadius || dist_lowerleft <= ringRadius) && dist != 0)
-        {
-          svg.append("circle")
-                  .attr("class", "point intersect-point")
-                  .attr("cx", quadPointX)
-                  .attr("cy", quadPointY)
-                  .attr("r", 3);
-          results.push(quadPoint);
-          // console.log("Punkt außerhalb des Rings, aber Quadrant schneidet den Ring: ", quadPoint);
-          // console.log("quad.x1:", quad.x1,"quad.y1:", quad.y1,"quad.x2:", quad.x2,"quad.y2:", quad.y2);
-          // console.log("SelectedPointX: ", selectedPoint.x);
-          // console.log("SelectedPointY: ", selectedPoint.y);
-          // console.log("Ringradius: ", ringRadius);
-          // console.log("Ringradius + SelectedPointX: ", ringRadius + selectedPoint.x);
-          // console.log("Ringradius + SelectedPointY: ", ringRadius + selectedPoint.y);
-          // console.log("Ringradius - SelectedPointX: ", ringRadius - selectedPoint.x);
-          // console.log("Ringradius - SelectedPointY: ", ringRadius - selectedPoint.y);
-        }
-        console.log(results);
-      }
-      return x1 >= selectedPoint.x + ringRadius || x2 <= selectedPoint.x - ringRadius ||
-              y1 >= selectedPoint.y + ringRadius || y2 <= selectedPoint.y - ringRadius;
-    });
-    index++;
-    if (index >= data.length) {
-      index = 0;
+        prevPoint = {
+            point: point,
+            ring: ring
+        };
     }
-    prevPoint = {
-      point: point,
-      ring: ring
-    };
-  }
 
-  function distance(point1, point2) {
-    var dx = point1.x - point2.x;
-    var dy = point1.y - point2.y;
-    return Math.sqrt(dx * dx + dy * dy);
-  }
-  function calculateRingRadius(point, d) {
-    var deltaX = d * (longestEdgeLength/2);
-    var deltaY = d * (longestEdgeLength/2);
-    return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-  }
-  function nodes(quadtree) {
-    var nodes = [];
-    quadtree.depth = 0;
-    quadtree.visit(function(node, x1, y1, x2, y2) {
-      node.x1 = x1;
-      node.y1 = y1;
-      node.x2 = x2;
-      node.y2 = y2;
-      nodes.push(node);
-      for (var i=0; i<data.length; i++) {
-        if (node.nodes[i]) node.nodes[i].depth = node.depth+1;
-      }
-    });
-    return nodes;
-  }
+    function distance(point1, point2) {
+        var dx = point1.x - point2.x;
+        var dy = point1.y - point2.y;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+    function calculateRingRadius(point, d) {
+        var deltaX = d * (longestEdgeLength/2);
+        var deltaY = d * (longestEdgeLength/2);
+        return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    }
+    function nodes(quadtree) {
+        var nodes = [];
+        quadtree.depth = 0;
+        quadtree.visit(function(node, x1, y1, x2, y2) {
+            node.x1 = x1;
+            node.y1 = y1;
+            node.x2 = x2;
+            node.y2 = y2;
+            nodes.push(node);
+            for (var i=0; i<data.length; i++) {
+                if (node.nodes[i]) node.nodes[i].depth = node.depth+1;
+            }
+        });
+        return nodes;
+    }
 </script>
 </body>
 </html>
