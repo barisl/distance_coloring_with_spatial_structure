@@ -69,6 +69,7 @@
     var svg,quadtree,longestEdgeLength;
     var data = [];
     var edges = [];
+    var results = [];
     var d = 2;
 
     d3.csv("minnesota.csv", function(csvData) {
@@ -78,12 +79,14 @@
                 if(d.vertex == "source"){
                     isSourceTarget = true;
                 } else {
-                    data.push({ vertex: d.vertex, x: +d.x, y: +d.y });
+                    data.push({ vertex: d.vertex, x: +d.x, y: +d.y, col:0 });
                 }
             } else {
                 edges.push({ source: d.vertex, target: d.x });
             }
         });
+        console.log(data);
+
         longestEdgeLength = 0;
         var longestEdge = null;
 
@@ -151,7 +154,6 @@
     button.addEventListener('click', drawNextCircle);
 
     function drawNextCircle() {
-        var results = [];
 
         svg.selectAll("line").remove();
 
@@ -194,7 +196,7 @@
                         .attr("cx", quadPointX)
                         .attr("cy", quadPointY)
                         .attr("r", 3);
-                    results.push(quadPoint);
+                    results.push({x:quadPointX, y:quadPointY, col: quad.point.col});
                 }
                 else if ((dist_upperleft <= ringRadius || dist_lowerright <= ringRadius || dist_upperright <= ringRadius || dist_lowerleft <= ringRadius) && dist != 0)
                 {
@@ -203,7 +205,7 @@
                         .attr("cx", quadPointX)
                         .attr("cy", quadPointY)
                         .attr("r", 3);
-                    results.push(quadPoint);
+                    results.push({x:quadPointX, y:quadPointY, col: quad.point.col});
                 }
                 console.log(results);
             }
@@ -219,7 +221,6 @@
             ring: ring
         };
     }
-
     function distance(point1, point2) {
         var dx = point1.x - point2.x;
         var dy = point1.y - point2.y;
@@ -239,8 +240,13 @@
             node.x2 = x2;
             node.y2 = y2;
             nodes.push(node);
+            if (node.point) {
+                node.point.col = data.find(p => p.x === node.point[0] && p.y === node.point[1]).col;
+            }
             for (var i=0; i<data.length; i++) {
-                if (node.nodes[i]) node.nodes[i].depth = node.depth+1;
+                if (node.nodes[i]) {
+                    node.nodes[i].depth = node.depth + 1;
+                }
             }
         });
         return nodes;
