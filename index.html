@@ -20,8 +20,6 @@
         svg {
             border: 1px solid black;
             background: grey;
-            display: block;
-            margin: auto;
         }
         .point {
             fill: darkgrey;
@@ -52,6 +50,10 @@
             stroke: green;
             stroke-width: 2;
         }
+        .longest-edge {
+            stroke: red;
+            stroke-width: 2;
+        }
         #drawNext {
             margin-top: 20px;
         }
@@ -69,10 +71,10 @@
     var svg,quadtree,longestEdgeLength;
     var data = [];
     var edges = [];
-    var results = [];
+    var neighbor_color = [];
     var d = 2;
 
-    d3.csv("minnesota.csv", function(csvData) {
+    d3.csv("graph_example.csv", function(csvData) {
         let isSourceTarget = false;
         csvData.forEach(function(d) {
             if(!isSourceTarget) {
@@ -109,11 +111,10 @@
         minY = d3.min(data, function(d) { return d.y; });
         maxX = d3.max(data, function(d) { return d.x; });
         maxY = d3.max(data, function(d) { return d.y; });
-        var width = maxX - minX;
-        var height = maxY - minY;
+        var width = maxX + 100,
+            height = maxY + 100;
 
-
-        quadtree = d3.geom.quadtree().extent([[-1, -1], [width + 1, height + 1]])(data.map(d => [d.x, d.y]));
+        quadtree = d3.geom.quadtree().extent([[-1, -1], [width, height]])(data.map(d => [d.x, d.y]));
 
         svg = d3.select("#svg-container")
             .attr("width", width)
@@ -137,6 +138,14 @@
                     .attr("y1", sourceNode.y)
                     .attr("x2", targetNode.x)
                     .attr("y2", targetNode.y);
+                if (edge.source === longestEdge.source && edge.target === longestEdge.target) {
+                    svg.append("line")
+                        .attr("class", "longest-edge")
+                        .attr("x1", sourceNode.x)
+                        .attr("y1", sourceNode.y)
+                        .attr("x2", targetNode.x)
+                        .attr("y2", targetNode.y);
+                }
             }
         });
         var point = svg.selectAll(".point")
@@ -163,6 +172,7 @@
             svg.selectAll(".neighbor-point").remove();
             svg.selectAll(".central-point").remove();
             svg.selectAll(".intersect-point").remove();
+            neighbor_color = [];
         }
         var selectedPoint = data[index];
         var point = svg.append("circle")
@@ -196,7 +206,9 @@
                         .attr("cx", quadPointX)
                         .attr("cy", quadPointY)
                         .attr("r", 3);
-                    results.push({x:quadPointX, y:quadPointY, col: quad.point.col});
+                    if(quad.point.col > 0) {
+                        neighbor_color.push(quad.point.col);
+                    }
                 }
                 else if ((dist_upperleft <= ringRadius || dist_lowerright <= ringRadius || dist_upperright <= ringRadius || dist_lowerleft <= ringRadius) && dist != 0)
                 {
@@ -205,10 +217,21 @@
                         .attr("cx", quadPointX)
                         .attr("cy", quadPointY)
                         .attr("r", 3);
-                    results.push({x:quadPointX, y:quadPointY, col: quad.point.col});
+                    if(quad.point.col > 0) {
+                        neighbor_color.push(quad.point.col);
+                    }
                 }
-                console.log(results);
             }
+            let min_col = Math.min(neighbor_color);
+            let max_col = Math.max(neighbor_color);
+            if(neighbor_color.length == 0){
+                let next_min_col = min_col + 1;
+                console.log(next_min_col);
+                neighbor_color.push(next_min_col);
+            }
+                selectedPoint.col = Math.min(neighbor_color);
+            console.log(neighbor_color)
+            console.log("SelectedPoint: ",selectedPoint, "Farbe: ",selectedPoint.col)
             return x1 >= selectedPoint.x + ringRadius || x2 <= selectedPoint.x - ringRadius ||
                 y1 >= selectedPoint.y + ringRadius || y2 <= selectedPoint.y - ringRadius;
         });
