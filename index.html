@@ -68,11 +68,16 @@
 
 <script src="https://d3js.org/d3.v3.min.js"></script>
 <script>
-    var svg,quadtree,longestEdgeLength;
+    var svg,quadtree,longestEdgeLength, quadtreeLength;
+    var setSelectedPointCol = false;
     var data = [];
     var edges = [];
-    var neighbor_color = [];
-    var d = 2;
+    var total_col = [];
+    var neighbor = [];
+    var neighbor_col = [];
+    var poss_col = [];
+    var colAssignments = [];
+    var dist = 1;
 
     d3.csv("graph_example.csv", function(csvData) {
         let isSourceTarget = false;
@@ -81,7 +86,7 @@
                 if(d.vertex == "source"){
                     isSourceTarget = true;
                 } else {
-                    data.push({ vertex: d.vertex, x: +d.x, y: +d.y, col:0 });
+                        data.push({vertex: d.vertex, x: +d.x, y: +d.y});
                 }
             } else {
                 edges.push({ source: d.vertex, target: d.x });
@@ -111,14 +116,17 @@
         minY = d3.min(data, function(d) { return d.y; });
         maxX = d3.max(data, function(d) { return d.x; });
         maxY = d3.max(data, function(d) { return d.y; });
-        var width = maxX + 100,
-            height = maxY + 100;
 
-        quadtree = d3.geom.quadtree().extent([[-1, -1], [width, height]])(data.map(d => [d.x, d.y]));
+        var width = 550,
+            height = 550;
+
+        quadtree = d3.geom.quadtree().extent([[-1, -1], [height, width]])(data.map(d => [d.x, d.y]));
 
         svg = d3.select("#svg-container")
             .attr("width", width)
             .attr("height", height)
+            .append("g")
+
 
         var rect = svg.selectAll(".node")
             .data(nodes(quadtree))
@@ -165,6 +173,7 @@
     function drawNextCircle() {
 
         svg.selectAll("line").remove();
+        var selectedPointQuad;
 
         if (prevPoint) {
             prevPoint.point.remove();
@@ -172,7 +181,9 @@
             svg.selectAll(".neighbor-point").remove();
             svg.selectAll(".central-point").remove();
             svg.selectAll(".intersect-point").remove();
-            neighbor_color = [];
+            poss_col = [];
+            neighbor_col = [];
+            neighbor = [];
         }
         var selectedPoint = data[index];
         var point = svg.append("circle")
@@ -180,8 +191,7 @@
             .attr("cx", selectedPoint.x)
             .attr("cy", selectedPoint.y)
             .attr("r", 5)
-
-        var ringRadius = calculateRingRadius(selectedPoint, d);
+        var ringRadius = calculateRingRadius(selectedPoint, dist);
 
         var ring = svg.append("circle")
             .attr("class", "ring")
@@ -190,7 +200,7 @@
             .attr("r", ringRadius);
 
         quadtree.visit(function(quad, x1, y1, x2, y2) {
-            if (quad.point) {
+            if (quad.point) {;
                 var quadPoint = quad.point;
                 var quadPointX = quadPoint[0];
                 var quadPointY = quadPoint[1];
@@ -200,49 +210,57 @@
                 var dist_lowerleft = distance(selectedPoint, {x: quad.x1, y: quad.y2});
                 var dist = distance(selectedPoint, {x:quadPointX, y:quadPointY});
 
-                if (dist <= ringRadius && dist != 0) {
+                if(dist == 0) {
+                    selectedPointQuad = quad.point;
+                }
+
+                if ((dist <= ringRadius || (dist_upperleft <= ringRadius || dist_lowerright <= ringRadius || dist_upperright <= ringRadius || dist_lowerleft <= ringRadius)) && dist != 0) {
                     svg.append("circle")
                         .attr("class", "point neighbor-point")
                         .attr("cx", quadPointX)
                         .attr("cy", quadPointY)
                         .attr("r", 3);
-                    if(quad.point.col > 0) {
-                        neighbor_color.push(quad.point.col);
-                    }
-                }
-                else if ((dist_upperleft <= ringRadius || dist_lowerright <= ringRadius || dist_upperright <= ringRadius || dist_lowerleft <= ringRadius) && dist != 0)
-                {
-                    svg.append("circle")
-                        .attr("class", "point intersect-point")
-                        .attr("cx", quadPointX)
-                        .attr("cy", quadPointY)
-                        .attr("r", 3);
-                    if(quad.point.col > 0) {
-                        neighbor_color.push(quad.point.col);
-                    }
+                        neighbor_col.push(quad.point.col);
+
                 }
             }
-            let min_col = Math.min(neighbor_color);
-            let max_col = Math.max(neighbor_color);
-            if(neighbor_color.length == 0){
-                let next_min_col = min_col + 1;
-                console.log(next_min_col);
-                neighbor_color.push(next_min_col);
-            }
-                selectedPoint.col = Math.min(neighbor_color);
-            console.log(neighbor_color)
-            console.log("SelectedPoint: ",selectedPoint, "Farbe: ",selectedPoint.col)
             return x1 >= selectedPoint.x + ringRadius || x2 <= selectedPoint.x - ringRadius ||
                 y1 >= selectedPoint.y + ringRadius || y2 <= selectedPoint.y - ringRadius;
         });
+        if(!total_col.length){
+            maxNeighbor = d3.max(neighbor_col);
+            total_col.push(maxNeighbor +1 );
+        }
+        total_col.forEach(function (d) {
+            if (!neighbor_col.includes(d) && !poss_col.includes(d)) {
+                poss_col.push(d)
+                console.log("Vergleich Total mit Neighbor: ", poss_col);
+            }
+            });
+        if(!poss_col.length) {
+            maxTotal = d3.max(total_col);
+            poss_col.push(maxTotal + 1);
+            console.log("2.Vergleich Total mit Neighbor: ", poss_col);
+        }
+            selectedPoint.col = d3.min(poss_col);
+            selectedPointQuad.col = d3.min(poss_col);
+            if (!total_col.includes(selectedPoint.col) || !total_col.includes(selectedPointQuad.col)) {
+                total_col.push(selectedPointQuad.col);
+            }
+
+        console.log("Nachbarsfarben: ",neighbor_col);
+        console.log("Mögliche Farben: ",poss_col);
+        console.log("Alle Farben: ",total_col);
+        console.log("SelectedPointQuad: ",selectedPointQuad)
         index++;
+
         if (index >= data.length) {
             index = 0;
         }
         prevPoint = {
             point: point,
             ring: ring
-        };
+        }
     }
     function distance(point1, point2) {
         var dx = point1.x - point2.x;
@@ -264,7 +282,8 @@
             node.y2 = y2;
             nodes.push(node);
             if (node.point) {
-                node.point.col = data.find(p => p.x === node.point[0] && p.y === node.point[1]).col;
+                    node.point.col = 0;
+                //console.log(node.point)
             }
             for (var i=0; i<data.length; i++) {
                 if (node.nodes[i]) {
