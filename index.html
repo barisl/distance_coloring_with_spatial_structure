@@ -19,9 +19,9 @@
         }
         .info-container {
             position: fixed;
-            top: 50%;
-            right: 0;
-            transform: translateY(-50%);
+            top: 15%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             padding: 100px;
             color: white;
             word-wrap: break-word;
@@ -63,6 +63,10 @@
             stroke: red;
             stroke-width: 2;
         }
+        .wrong-path {
+            stroke: red;
+            stroke-width: 2;
+        }
         #allButton {
             margin-top: 20px;
         }
@@ -76,12 +80,11 @@
 <div class="info-container">
     <div id="infoContainer"></div>
 </div>
-</div>
 
 <script src="https://d3js.org/d3.v3.min.js"></script>
 <script>
     var infoContainer = document.getElementById('infoContainer');
-    var svg,quadtree,longestEdgeLength,selectedPointQuad;
+    var svg,quadtree,longestEdgeLength,selectedPointQuad,pathMatrix;
     var data = [];
     var edges = [];
     var total_col = [];
@@ -100,7 +103,7 @@
                 if(d.vertex == "source"){
                     isSourceTarget = true;
                 } else {
-                        data.push({vertex: d.vertex, x: +d.x, y: +d.y});
+                    data.push({vertex: d.vertex, x: +d.x, y: +d.y});
                 }
             } else {
                 edges.push({ source: d.vertex, target: d.x });
@@ -142,8 +145,6 @@
             .attr("width", width)
             .attr("height", height)
             .append("g")
-
-
         var rect = svg.selectAll(".node")
             .data(nodes(quadtree))
             .enter().append("rect")
@@ -179,13 +180,13 @@
             .attr("cx", function (d) {return d.x;})
             .attr("cy", function (d) {return d.y;})
             .attr("r", 3)
+        pathMatrix = calculatePaths(data,edges);
+        console.log(pathMatrix);
     });
     var index = 0;
     var prevPoint = null;
-
     var button = document.getElementById('allButton');
     button.addEventListener('click', drawNextCircle);
-
     function drawNextCircle() {
         for (var i = 0; i < data.length; i++) {
             //svg.selectAll("line").remove();
@@ -208,7 +209,6 @@
                 .attr("r", 3)
                 .style("fill", getColor(selectedPoint.col));
             var ringRadius = calculateRingRadius(selectedPoint, dist);
-
             var ring = svg.append("circle")
                 .attr("class", "ring")
                 .attr("cx", selectedPoint.x)
@@ -217,7 +217,6 @@
 
             quadtree.visit(function (quad, x1, y1, x2, y2) {
                 if (quad.point) {
-                    ;
                     var quadPoint = quad.point;
                     var quadPointX = quadPoint[0];
                     var quadPointY = quadPoint[1];
@@ -226,11 +225,9 @@
                     var dist_upperright = distance(selectedPoint, {x: quad.x2, y: quad.y1});
                     var dist_lowerleft = distance(selectedPoint, {x: quad.x1, y: quad.y2});
                     var dist = distance(selectedPoint, {x: quadPointX, y: quadPointY});
-
                     if (dist == 0) {
                         selectedPointQuad = quad.point;
                     }
-
                     if ((dist <= ringRadius || (dist_upperleft <= ringRadius || dist_lowerright <= ringRadius || dist_upperright <= ringRadius || dist_lowerleft <= ringRadius)) && dist != 0) {
                         neighbor_col.push(quad.point.col);
                     }
@@ -262,19 +259,19 @@
             if (!total_col.includes(selectedPoint.col) || !total_col.includes(selectedPointQuad.col)) {
                 total_col.push(selectedPointQuad.col);
             }
-
             index++;
             updateInfo();
             if ((index == data.length) && selectedPointQuad.col != 0) {
                 button.remove();
                 updateLastInfo();
+                svg.selectAll(".ring").remove();
             }
             prevPoint = {
                 point: point,
                 ring: ring
             }
         }
-  }
+    }
     function distance(point1, point2) {
         var dx = point1.x - point2.x;
         var dy = point1.y - point2.y;
@@ -295,7 +292,7 @@
             node.y2 = y2;
             nodes.push(node);
             if (node.point) {
-                    node.point.col = 0;
+                node.point.col = 0;
             }
             for (var i=0; i<data.length; i++) {
                 if (node.nodes[i]) {
@@ -330,7 +327,69 @@
         infoContainer.innerHTML = `
                 <p>d = ${dist}</p>
                 <p>k = ${total_col.length}</p>
+                <p>p = ${wrongPaths(data, pathMatrix, svg, dist)}</p>
             `;
+    }
+    function calculatePaths(data, edges) {
+        const adjacencyList = new Array(data.length).fill().map(() => []);
+        for (var edge of edges) {
+            const { source, target } = edge;
+            const sourceIndex = data.findIndex(node => node.vertex === source);
+            const targetIndex = data.findIndex(node => node.vertex === target);
+            adjacencyList[sourceIndex].push(targetIndex);
+            adjacencyList[targetIndex].push(sourceIndex);
+        }
+        const calculatePathsMatrix = [];
+        for (var i = 0; i < data.length; i++) {
+            const row = new Array(data.length).fill(Infinity);
+            row[i] = 0;
+            const queue = [i];
+            const visited = new Array(data.length).fill(false);
+            visited[i] = true;
+            while (queue.length > 0) {
+                const currentNode = queue.shift();
+                const currentDistance = row[currentNode];
+                for (var neighbor of adjacencyList[currentNode]) {
+                    if (!visited[neighbor]) {
+                        row[neighbor] = currentDistance + 1;
+                        queue.push(neighbor);
+                        visited[neighbor] = true;
+                    }
+                }
+            }
+            calculatePathsMatrix.push(row);
+        }
+        return calculatePathsMatrix;
+    }
+    function wrongPaths(data, pathMatrix, svg, dist) {
+        var count = 0;
+        for (var i = 0; i < data.length; i++) {
+            for (var j = i + 1; j < data.length; j++) {
+                if (data[i].col === data[j].col && pathMatrix[i][j] <= dist) {
+                    count++;
+                    const sourceNode = data[i];
+                    const targetNode = data[j];
+                    console.log("Source:", sourceNode, "Target:", targetNode);
+                    svg.append("line")
+                        .attr("class", "wrong-path")
+                        .attr("x1", sourceNode.x)
+                        .attr("y1", sourceNode.y)
+                        .attr("x2", targetNode.x)
+                        .attr("y2", targetNode.y);
+                    svg.append("circle")
+                        .attr("class", "point")
+                        .attr("cx", sourceNode.x)
+                        .attr("cy", sourceNode.y)
+                        .attr("r", 3);
+                    svg.append("circle")
+                        .attr("class", "point")
+                        .attr("cx", targetNode.x)
+                        .attr("cy", targetNode.y)
+                        .attr("r", 3);
+                }
+            }
+        }
+        return count;
     }
 </script>
 </body>
