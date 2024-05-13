@@ -1,5 +1,7 @@
 var infoContainer = document.getElementById('infoContainer');
-var svg,quadtree,longestEdgeLength,selectedPointQuad,pathMatrix;
+var svg,quadtree,longestEdgeLength,averageEdgeLength,selectedPointQuad,pathMatrix;
+var useLongestEdge = false;
+var sumEdgeLength = 0;
 var data = [];
 var edges = [];
 var total_col = [];
@@ -46,6 +48,7 @@ d3.csv("graph_example.csv", function(csvData) {
             return node.vertex === edge.target;
         });
         var edgeLength = distance(sourceNode, targetNode);
+        sumEdgeLength += edgeLength;
         if (edgeLength > longestEdgeLength) {
             longestEdgeLength = edgeLength;
             longestEdge = edge
@@ -78,7 +81,7 @@ d3.csv("graph_example.csv", function(csvData) {
                 .attr("y1", sourceNode.y)
                 .attr("x2", targetNode.x)
                 .attr("y2", targetNode.y);
-            if (edge.source === longestEdge.source && edge.target === longestEdge.target) {
+            if (edge.source === longestEdge.source && edge.target === longestEdge.target && useLongestEdge) {
                 svg.append("line")
                     .attr("class", "longest-edge")
                     .attr("x1", sourceNode.x)
@@ -193,9 +196,16 @@ function distance(point1, point2) {
     return Math.sqrt(dx * dx + dy * dy);
 }
 function calculateRingRadius(point, d) {
-    var deltaX = d * (longestEdgeLength/2);
-    var deltaY = d * (longestEdgeLength/2);
-    return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        if (useLongestEdge) {
+            var deltaX = d * (longestEdgeLength / 2);
+            var deltaY = d * (longestEdgeLength / 2);
+            return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        } else {
+            averageEdgeLength = sumEdgeLength / edges.length;
+            var deltaX = d * (averageEdgeLength / 2);
+            var deltaY = d * (averageEdgeLength / 2);
+            return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        }
 }
 function nodes(quadtree) {
     var nodes = [];
