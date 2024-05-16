@@ -91,15 +91,14 @@ d3.csv("graph_example.csv", function(csvData) {
             }
         }
     });
-    var point = svg.selectAll(".point")
+    svg.selectAll(".point")
         .data(data)
         .enter().append("circle")
         .attr("class","point")
         .attr("cx", function (d) {return d.x;})
         .attr("cy", function (d) {return d.y;})
-        .attr("r", 3)
+        .attr("r", 3);
     pathMatrix = calculatePaths(data,edges);
-    console.log(pathMatrix);
 });
 var index = 0;
 var prevPoint = null;
@@ -138,15 +137,15 @@ function drawNextCircle() {
                 var quadPoint = quad.point;
                 var quadPointX = quadPoint[0];
                 var quadPointY = quadPoint[1];
-                var dist_upperleft = distance(selectedPoint, {x: quad.x1, y: quad.y1});
-                var dist_lowerright = distance(selectedPoint, {x: quad.x2, y: quad.y2});
-                var dist_upperright = distance(selectedPoint, {x: quad.x2, y: quad.y1});
-                var dist_lowerleft = distance(selectedPoint, {x: quad.x1, y: quad.y2});
+                var quadUp = intersects(x1,y1,x2,y1,selectedPoint.x,selectedPoint.y,ringRadius);
+                var quadRight = intersects(x2,y1,x2,y2,selectedPoint.x,selectedPoint.y,ringRadius);
+                var quadDown = intersects(x2,y2,x1,y2,selectedPoint.x,selectedPoint.y,ringRadius);
+                var quadLeft = intersects(x2,y2,x1,y1,selectedPoint.x,selectedPoint.y,ringRadius);
                 var dist = distance(selectedPoint, {x: quadPointX, y: quadPointY});
                 if (dist == 0) {
                     selectedPointQuad = quad.point;
                 }
-                if ((dist <= ringRadius || (dist_upperleft <= ringRadius || dist_lowerright <= ringRadius || dist_upperright <= ringRadius || dist_lowerleft <= ringRadius)) && dist != 0) {
+                if ((dist <= ringRadius || (quadUp || quadRight || quadDown || quadLeft)) && dist != 0) {
                     neighbor_col.push(quad.point.col);
                 }
             }
@@ -190,22 +189,48 @@ function drawNextCircle() {
         }
     }
 }
+function intersects(x1, y1, x2, y2, cx, cy, r) {
+
+    var dx = x2 - x1;
+    var dy = y2 - y1;
+
+    var fx = x1 - cx;
+    var fy = y1 - cy;
+
+    var a = dx * dx + dy * dy;
+    var b = 2 * (fx * dx + fy * dy);
+    var c = (fx * fx + fy * fy) - r * r;
+
+    var dis = b * b - 4 * a * c;
+    if (dis < 0) {
+        return false;
+    } else {
+        var disSqrt = Math.sqrt(dis);
+        var t1 = (-b - disSqrt) / (2 * a);
+        var t2 = (-b + disSqrt) / (2 * a);
+        if ((t1 >= 0 && t1 <= 1) || (t2 >= 0 && t2 <= 1)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+}
 function distance(point1, point2) {
     var dx = point1.x - point2.x;
     var dy = point1.y - point2.y;
     return Math.sqrt(dx * dx + dy * dy);
 }
 function calculateRingRadius(point, d) {
-        if (useLongestEdge) {
-            var deltaX = d * (longestEdgeLength / 2);
-            var deltaY = d * (longestEdgeLength / 2);
-            return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-        } else {
-            averageEdgeLength = sumEdgeLength / edges.length;
-            var deltaX = d * (averageEdgeLength / 2);
-            var deltaY = d * (averageEdgeLength / 2);
-            return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-        }
+    if (useLongestEdge) {
+        var deltaX = d * (longestEdgeLength);
+        var deltaY = d * (longestEdgeLength);
+        return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    } else {
+        averageEdgeLength = sumEdgeLength / edges.length;
+        var deltaX = d * (averageEdgeLength);
+        var deltaY = d * (averageEdgeLength);
+        return Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    }
 }
 function nodes(quadtree) {
     var nodes = [];
@@ -305,12 +330,14 @@ function wrongPaths(data, pathMatrix, svg, dist) {
                     .attr("class", "point")
                     .attr("cx", sourceNode.x)
                     .attr("cy", sourceNode.y)
-                    .attr("r", 3);
+                    .attr("r", 3)
+                    .style("fill", getColor(sourceNode.col));
                 svg.append("circle")
                     .attr("class", "point")
                     .attr("cx", targetNode.x)
                     .attr("cy", targetNode.y)
-                    .attr("r", 3);
+                    .attr("r", 3)
+                    .style("fill", getColor(targetNode.col));
             }
         }
     }
