@@ -1,7 +1,7 @@
 var infoContainer = document.getElementById('infoContainer');
 var svg, quadtree, longestEdgeLength, averageEdgeLength, selectedPointQuad, pathMatrix;
 var useLongestEdge = true;
-var useQuadrants = true;
+var outsideCircle = true;
 var sumEdgeLength = 0;
 var data = [];
 var edges = [];
@@ -17,7 +17,7 @@ var dist = 2;
 document.getElementById('applySettings').addEventListener('click', function() {
     var edgeLengthOption = document.getElementById('edgeLengthOption').value;
     useLongestEdge = (edgeLengthOption === 'longest');
-    useQuadrants = document.getElementById('useQuadrants').value === 'true';
+    outsideCircle = document.getElementById('outsideCircle').value === 'true';
     document.querySelector('.settings-container').style.display = 'none';
     document.getElementById('allButton').style.display = 'block';
     initialSettings();
@@ -155,7 +155,7 @@ function drawNextCircle() {
             if (dist === 0) {
                 selectedPointQuad = quad.point;
             }
-            if(useQuadrants){
+            if(outsideCircle){
                 if ((dist <= ringRadius || (quadUp || quadRight || quadDown || quadLeft)) && dist !== 0) {
                     neighbor_col.push(quad.point.col);
                 }
