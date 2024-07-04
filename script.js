@@ -1,6 +1,7 @@
 var infoContainer = document.getElementById('infoContainer');
-var svg,quadtree,longestEdgeLength,averageEdgeLength,selectedPointQuad,pathMatrix;
-var useLongestEdge = false;
+var svg, quadtree, longestEdgeLength, averageEdgeLength, selectedPointQuad, pathMatrix;
+var useLongestEdge = true;
+var useQuadrants = true;
 var sumEdgeLength = 0;
 var data = [];
 var edges = [];
@@ -9,188 +10,202 @@ var neighbor_col = [];
 var colorMap = {};
 const maxX = 500;
 const maxY = 500;
-var dist = 2;
+var dist = 3;
 
-d3.csv("graph_example.csv", function(csvData) {
-    let isSourceTarget = false;
-    csvData.forEach(function(d) {
-        if(!isSourceTarget) {
-            if(d.vertex == "source"){
-                isSourceTarget = true;
+document.getElementById('applySettings').addEventListener('click', function() {
+    var edgeLengthOption = document.getElementById('edgeLengthOption').value;
+    useLongestEdge = (edgeLengthOption === 'longest');
+    useQuadrants = document.getElementById('useQuadrants').value === 'true';
+    document.querySelector('.settings-container').style.display = 'none';
+    document.getElementById('allButton').style.display = 'block';
+    initialSettings();
+});
+
+function initialSettings() {
+    d3.csv("minnesota.csv", function(csvData) {
+        let isSourceTarget = false;
+        csvData.forEach(function(d) {
+            if(!isSourceTarget) {
+                if(d.vertex == "source"){
+                    isSourceTarget = true;
+                } else {
+                    data.push({vertex: d.vertex, x: +d.x, y: +d.y});
+                }
             } else {
-                data.push({vertex: d.vertex, x: +d.x, y: +d.y});
+                edges.push({ source: d.vertex, target: d.x });
             }
-        } else {
-            edges.push({ source: d.vertex, target: d.x });
-        }
-    });
-    let min_x = d3.min(data.map(d => d.x));
-    let min_y = d3.min(data.map(d => d.y));
-    let max_x = d3.max(data.map(d => d.x));
-    let max_y = d3.max(data.map(d => d.y));
-
-    data.forEach(d => {
-        d.x = (d.x - min_x) / (max_x - min_x) * maxX;
-        d.y = (d.y - min_y) / (max_y - min_y) * maxY;
-    });
-    console.log(data);
-    longestEdgeLength = 0;
-    var longestEdge = null;
-
-    for (var i = 0; i < edges.length; i++) {
-        var edge = edges[i];
-        var sourceNode = data.find(function (node) {
-            return node.vertex === edge.source;
         });
-        var targetNode = data.find(function (node) {
-            return node.vertex === edge.target;
+        let min_x = d3.min(data.map(d => d.x));
+        let min_y = d3.min(data.map(d => d.y));
+        let max_x = d3.max(data.map(d => d.x));
+        let max_y = d3.max(data.map(d => d.y));
+
+        data.forEach(d => {
+            d.x = (d.x - min_x) / (max_x - min_x) * maxX;
+            d.y = (d.y - min_y) / (max_y - min_y) * maxY;
         });
-        var edgeLength = distance(sourceNode, targetNode);
-        console.log(edge.source + " - " + edge.target + " = " + edgeLength)
-        sumEdgeLength += edgeLength;
-        if (edgeLength > longestEdgeLength) {
-            longestEdgeLength = edgeLength;
-            longestEdge = edge
+
+        longestEdgeLength = 0;
+        var longestEdge = null;
+
+        for (var i = 0; i < edges.length; i++) {
+            var edge = edges[i];
+            var sourceNode = data.find(function (node) {
+                return node.vertex === edge.source;
+            });
+            var targetNode = data.find(function (node) {
+                return node.vertex === edge.target;
+            });
+            var edgeLength = distance(sourceNode, targetNode);
+            sumEdgeLength += edgeLength;
+            if (edgeLength > longestEdgeLength) {
+                longestEdgeLength = edgeLength;
+                longestEdge = edge
+            }
         }
-    }
-    var width = 550,
-        height = 550;
+        var width = 550,
+            height = 550;
 
-    quadtree = d3.geom.quadtree().extent([[-1, -1], [height, width]])(data.map(d => [d.x, d.y]));
+        quadtree = d3.geom.quadtree().extent([[-1, -1], [height, width]])(data.map(d => [d.x, d.y]));
 
-    svg = d3.select("#svg-container")
-        .attr("width", width)
-        .attr("height", height)
-        .append("g")
-    var rect = svg.selectAll(".node")
-        .data(nodes(quadtree))
-        .enter().append("rect")
-        .attr("class", "node")
-        .attr("x", function(d) { return d.x1; })
-        .attr("y", function(d) { return d.y1; })
-        .attr("width", function(d) { return d.x2 - d.x1; })
-        .attr("height", function(d) { return d.y2 - d.y1; });
-    edges.forEach(function(edge) {
-        var sourceNode = data.find(function(node) { return node.vertex === edge.source; });
-        var targetNode = data.find(function(node) { return node.vertex === edge.target; });
-        if (sourceNode && targetNode) {
-            svg.append("line")
-                .attr("class", "edge")
-                .attr("x1", sourceNode.x)
-                .attr("y1", sourceNode.y)
-                .attr("x2", targetNode.x)
-                .attr("y2", targetNode.y);
-            if (edge.source === longestEdge.source && edge.target === longestEdge.target && useLongestEdge) {
+        svg = d3.select("#svg-container")
+            .attr("width", width)
+            .attr("height", height)
+            .append("g")
+        var rect = svg.selectAll(".node")
+            .data(nodes(quadtree))
+            .enter().append("rect")
+            .attr("class", "node")
+            .attr("x", function(d) { return d.x1; })
+            .attr("y", function(d) { return d.y1; })
+            .attr("width", function(d) { return d.x2 - d.x1; })
+            .attr("height", function(d) { return d.y2 - d.y1; });
+        edges.forEach(function(edge) {
+            var sourceNode = data.find(function(node) { return node.vertex === edge.source; });
+            var targetNode = data.find(function(node) { return node.vertex === edge.target; });
+            if (sourceNode && targetNode) {
                 svg.append("line")
-                    .attr("class", "longest-edge")
+                    .attr("class", "edge")
                     .attr("x1", sourceNode.x)
                     .attr("y1", sourceNode.y)
                     .attr("x2", targetNode.x)
                     .attr("y2", targetNode.y);
+                if (edge.source === longestEdge.source && edge.target === longestEdge.target && useLongestEdge) {
+                    svg.append("line")
+                        .attr("class", "longest-edge")
+                        .attr("x1", sourceNode.x)
+                        .attr("y1", sourceNode.y)
+                        .attr("x2", targetNode.x)
+                        .attr("y2", targetNode.y);
+                }
             }
-        }
+        });
+        svg.selectAll(".point")
+            .data(data)
+            .enter().append("circle")
+            .attr("class","point")
+            .attr("cx", function (d) {return d.x;})
+            .attr("cy", function (d) {return d.y;})
+            .attr("r", 3);
+        pathMatrix = calculatePaths(data,edges);
     });
-    svg.selectAll(".point")
-        .data(data)
-        .enter().append("circle")
-        .attr("class","point")
-        .attr("cx", function (d) {return d.x;})
-        .attr("cy", function (d) {return d.y;})
-        .attr("r", 3);
-    pathMatrix = calculatePaths(data,edges);
-});
+}
+
 var index = 0;
 var prevPoint = null;
 var button = document.getElementById('allButton');
 button.addEventListener('click', drawNextCircle);
+
 function drawNextCircle() {
-    //for (var i = 0; i < data.length; i++) {
-        if (prevPoint) {
-            prevPoint.point.remove();
-            prevPoint.ring.remove();
-            svg.selectAll(".longest-edge").remove();
-            svg.selectAll(".neighbor-point").remove();
-            svg.selectAll(".intersect-point").remove();
-            neighbor_col = [];
-        }
+    if (prevPoint) {
+        prevPoint.point.remove();
+        prevPoint.ring.remove();
+        svg.selectAll(".longest-edge").remove();
+        svg.selectAll(".neighbor-point").remove();
+        svg.selectAll(".intersect-point").remove();
+        neighbor_col = [];
+    }
 
-        var selectedPoint = data[index];
-        var point = svg.append("circle")
-            .attr("class", "point central-point")
-            .attr("cx", selectedPoint.x)
-            .attr("cy", selectedPoint.y)
-            .attr("r", 3)
-            .style("fill", getColor(selectedPoint.col));
+    var selectedPoint = data[index];
+    var point = svg.append("circle")
+        .attr("class", "point central-point")
+        .attr("cx", selectedPoint.x)
+        .attr("cy", selectedPoint.y)
+        .attr("r", 3)
+        .style("fill", getColor(selectedPoint.col));
 
-        var ringRadius = calculateRingRadius(selectedPoint, dist);
-        var ring = svg.append("circle")
-            .attr("class", "ring")
-            .attr("cx", selectedPoint.x)
-            .attr("cy", selectedPoint.y)
-            .attr("r", ringRadius);
+    var ringRadius = calculateRingRadius(selectedPoint, dist);
+    var ring = svg.append("circle")
+        .attr("class", "ring")
+        .attr("cx", selectedPoint.x)
+        .attr("cy", selectedPoint.y)
+        .attr("r", ringRadius);
 
-        quadtree.visit(function (quad, x1, y1, x2, y2) {
-            if (quad.point) {
-                var quadPoint = quad.point;
-                var quadPointX = quadPoint[0];
-                var quadPointY = quadPoint[1];
-                var quadUp = intersects(x1, y1, x2, y1, selectedPoint.x, selectedPoint.y, ringRadius);
-                var quadRight = intersects(x2, y1, x2, y2, selectedPoint.x, selectedPoint.y, ringRadius);
-                var quadDown = intersects(x2, y2, x1, y2, selectedPoint.x, selectedPoint.y, ringRadius);
-                var quadLeft = intersects(x2, y2, x1, y1, selectedPoint.x, selectedPoint.y, ringRadius);
-                var dist = distance(selectedPoint, {x: quadPointX, y: quadPointY});
+    quadtree.visit(function (quad, x1, y1, x2, y2) {
+        if (quad.point) {
+            var quadPoint = quad.point;
+            var quadPointX = quadPoint[0];
+            var quadPointY = quadPoint[1];
+            var quadUp = intersects(x1, y1, x2, y1, selectedPoint.x, selectedPoint.y, ringRadius);
+            var quadRight = intersects(x2, y1, x2, y2, selectedPoint.x, selectedPoint.y, ringRadius);
+            var quadDown = intersects(x2, y2, x1, y2, selectedPoint.x, selectedPoint.y, ringRadius);
+            var quadLeft = intersects(x2, y2, x1, y1, selectedPoint.x, selectedPoint.y, ringRadius);
+            var dist = distance(selectedPoint, {x: quadPointX, y: quadPointY});
 
-                if (dist == 0) {
-                    selectedPointQuad = quad.point;
-                }
+            if (dist == 0) {
+                selectedPointQuad = quad.point;
+            }
+            if(useQuadrants){
                 if ((dist <= ringRadius || (quadUp || quadRight || quadDown || quadLeft)) && dist != 0) {
                     neighbor_col.push(quad.point.col);
                 }
             }
-            return x1 >= selectedPoint.x + ringRadius || x2 <= selectedPoint.x - ringRadius ||
-                y1 >= selectedPoint.y + ringRadius || y2 <= selectedPoint.y - ringRadius;
-        });
+            else{
+                if (dist <= ringRadius && dist != 0) {
+                    neighbor_col.push(quad.point.col);
+                }
+            }
+        }
+        return x1 >= selectedPoint.x + ringRadius || x2 <= selectedPoint.x - ringRadius ||
+            y1 >= selectedPoint.y + ringRadius || y2 <= selectedPoint.y - ringRadius;
+    });
 
-        var minAvailableColor = 1;
-        while (neighbor_col.includes(minAvailableColor)) {
-            minAvailableColor++;
-        }
-        selectedPoint.col = minAvailableColor;
-        selectedPointQuad.col = minAvailableColor;
-        svg.append("circle")
-            .attr("class", "point central-point")
-            .attr("cx", selectedPoint.x)
-            .attr("cy", selectedPoint.y)
-            .attr("r", 3)
-            .style("fill", getColor(selectedPoint.col))
-        if (!total_col.includes(selectedPoint.col) || !total_col.includes(selectedPointQuad.col)) {
-            total_col.push(selectedPointQuad.col);
-        }
-        index++;
-        updateInfo();
-        if ((index == data.length) && selectedPointQuad.col != 0) {
-            button.remove();
-            updateLastInfo();
-            svg.selectAll(".ring").remove();
-        }
-        prevPoint = {
-            point: point,
-            ring: ring
-        }
-    //}
+    var minAvailableColor = 1;
+    while (neighbor_col.includes(minAvailableColor)) {
+        minAvailableColor++;
+    }
+    selectedPoint.col = minAvailableColor;
+    selectedPointQuad.col = minAvailableColor;
+    svg.append("circle")
+        .attr("class", "point central-point")
+        .attr("cx", selectedPoint.x)
+        .attr("cy", selectedPoint.y)
+        .attr("r", 3)
+        .style("fill", getColor(selectedPoint.col))
+    if (!total_col.includes(selectedPoint.col) || !total_col.includes(selectedPointQuad.col)) {
+        total_col.push(selectedPointQuad.col);
+    }
+    index++;
+    updateInfo();
+    if ((index == data.length) && selectedPointQuad.col != 0) {
+        button.remove();
+        updateLastInfo();
+        svg.selectAll(".ring").remove();
+    }
+    prevPoint = {
+        point: point,
+        ring: ring
+    }
 }
-function intersects(x1, y1, x2, y2, cx, cy, r) {
 
+function intersects(x1, y1, x2, y2, cx, cy, r) {
     var dx = x2 - x1;
     var dy = y2 - y1;
-
     var fx = x1 - cx;
     var fy = y1 - cy;
-
     var a = dx * dx + dy * dy;
     var b = 2 * (fx * dx + fy * dy);
     var c = (fx * fx + fy * fy) - r * r;
-
     var dis = b * b - 4 * a * c;
     if (dis < 0) {
         return false;
@@ -205,11 +220,13 @@ function intersects(x1, y1, x2, y2, cx, cy, r) {
         }
     }
 }
+
 function distance(point1, point2) {
     var dx = point2.x - point1.x;
     var dy = point2.y - point1.y;
     return Math.sqrt(dx * dx + dy * dy);
 }
+
 function calculateRingRadius(point, d) {
     if (useLongestEdge) {
         return d * longestEdgeLength;
@@ -218,6 +235,7 @@ function calculateRingRadius(point, d) {
         return d * averageEdgeLength;
     }
 }
+
 function nodes(quadtree) {
     var nodes = [];
     quadtree.depth = 0;
@@ -238,6 +256,7 @@ function nodes(quadtree) {
     });
     return nodes;
 }
+
 function getColor(col) {
     if (colorMap[col]) {
         return colorMap[col];
@@ -251,12 +270,33 @@ function getColor(col) {
         return color;
     }
 }
+
 function updateInfo() {
+    function formatGUI(arr,end) {
+        var split = [];
+        if (arr.length > end) {
+            let firstEntries = arr.slice(0, end-3);
+            let lastEntry = arr[arr.length - 1];
+            let truncatedArr = [...firstEntries, "... ", lastEntry];
+            for (let i = 0; i < truncatedArr.length; i += 10) {
+                split.push(truncatedArr.slice(i, i + 10).join(', '));
+            }
+        } else {
+            for (let i = 0; i < arr.length; i += 10) {
+                split.push(arr.slice(i, i + 10).join(', '));
+            }
+        }
+        return split.join('<br>');
+    }
+
+    let neighborColFormatted = formatGUI(neighbor_col,150);
+    let totalColFormatted = formatGUI(total_col,90);
+
     infoContainer.innerHTML = `
-                <p>Nachbarsfarben: ${neighbor_col}</p>
-                 <p>Gewählte Farbe: ${selectedPointQuad.col}</p>
-                <p>Alle Farben: ${total_col}</p>
-            `;
+        <p>Nachbarsfarben:<br>${neighborColFormatted}</p>
+        <p>Gewählte Farbe: ${selectedPointQuad.col}</p>
+        <p>Alle Farben:<br>${totalColFormatted}</p>
+    `;
 }
 function updateLastInfo() {
     infoContainer.innerHTML = `
@@ -265,6 +305,7 @@ function updateLastInfo() {
                 <p>p = ${wrongPaths(data, pathMatrix, svg, dist)}</p>
             `;
 }
+
 function calculatePaths(data, edges) {
     const adjacencyList = new Array(data.length).fill().map(() => []);
     for (var edge of edges) {

@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quadtree - Distance coloring</title>
+    <title>Quadtree - Distance Coloring</title>
     <style>
         body, html {
             height: 100%;
             margin: 0;
             background: black;
+            color: white;
         }
         .container {
             display: flex;
@@ -20,8 +21,10 @@
         .info-container {
             position: fixed;
             top: 10%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            left: 35%;
+            width: 100%;
+            display: flex;
+            justify-content: center;
             color: white;
             word-wrap: break-word;
         }
@@ -69,12 +72,47 @@
         #allButton {
             margin-top: 20px;
         }
+        .settings-container {
+            width: 500px;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: grey;
+            padding: 20px;
+            border-radius: 1px;
+            color: white;
+            z-index: 10;
+            text-align: left;
+        }
+        .settings-container label {
+            display: block;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
+<div class="settings-container">
+    <h2>Menü</h2>
+    <label>
+        <span>Welche Kantelänge verwenden:</span>
+        <select id="edgeLengthOption">
+            <option value="longest" selected>Längste Kante</option>
+            <option value="average">Durchschnittliche Kante</option>
+        </select>
+    </label>
+    <label>
+        <span>Quadranten verwenden:</span>
+        <select id="useQuadrants">
+            <option value="true" selected>Ja</option>
+            <option value="false">Nein</option>
+        </select>
+    </label>
+    <button id="applySettings">Einstellungen anwenden</button>
+</div>
 <div class="container">
     <svg id="svg-container" transform="scale(1,-1)"></svg>
-    <button id="allButton">Start</button>
+    <button id="allButton" style="display: none;">Start</button>
 </div>
 <div class="info-container">
     <div id="infoContainer"></div>
