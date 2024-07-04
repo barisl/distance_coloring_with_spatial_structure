@@ -10,7 +10,9 @@ var neighbor_col = [];
 var colorMap = {};
 const maxX = 500;
 const maxY = 500;
-var dist = 3;
+const width = 550;
+const height = 550;
+var dist = 2;
 
 document.getElementById('applySettings').addEventListener('click', function() {
     var edgeLengthOption = document.getElementById('edgeLengthOption').value;
@@ -22,11 +24,11 @@ document.getElementById('applySettings').addEventListener('click', function() {
 });
 
 function initialSettings() {
-    d3.csv("minnesota.csv", function(csvData) {
+    d3.csv("graph_example.csv", function(csvData) {
         let isSourceTarget = false;
         csvData.forEach(function(d) {
             if(!isSourceTarget) {
-                if(d.vertex == "source"){
+                if(d.vertex === "source"){
                     isSourceTarget = true;
                 } else {
                     data.push({vertex: d.vertex, x: +d.x, y: +d.y});
@@ -63,8 +65,6 @@ function initialSettings() {
                 longestEdge = edge
             }
         }
-        var width = 550,
-            height = 550;
 
         quadtree = d3.geom.quadtree().extent([[-1, -1], [height, width]])(data.map(d => [d.x, d.y]));
 
@@ -72,7 +72,7 @@ function initialSettings() {
             .attr("width", width)
             .attr("height", height)
             .append("g")
-        var rect = svg.selectAll(".node")
+        svg.selectAll(".node")
             .data(nodes(quadtree))
             .enter().append("rect")
             .attr("class", "node")
@@ -134,7 +134,7 @@ function drawNextCircle() {
         .attr("r", 3)
         .style("fill", getColor(selectedPoint.col));
 
-    var ringRadius = calculateRingRadius(selectedPoint, dist);
+    var ringRadius = calculateRingRadius(dist);
     var ring = svg.append("circle")
         .attr("class", "ring")
         .attr("cx", selectedPoint.x)
@@ -152,16 +152,16 @@ function drawNextCircle() {
             var quadLeft = intersects(x2, y2, x1, y1, selectedPoint.x, selectedPoint.y, ringRadius);
             var dist = distance(selectedPoint, {x: quadPointX, y: quadPointY});
 
-            if (dist == 0) {
+            if (dist === 0) {
                 selectedPointQuad = quad.point;
             }
             if(useQuadrants){
-                if ((dist <= ringRadius || (quadUp || quadRight || quadDown || quadLeft)) && dist != 0) {
+                if ((dist <= ringRadius || (quadUp || quadRight || quadDown || quadLeft)) && dist !== 0) {
                     neighbor_col.push(quad.point.col);
                 }
             }
             else{
-                if (dist <= ringRadius && dist != 0) {
+                if (dist <= ringRadius && dist !== 0) {
                     neighbor_col.push(quad.point.col);
                 }
             }
@@ -187,7 +187,7 @@ function drawNextCircle() {
     }
     index++;
     updateInfo();
-    if ((index == data.length) && selectedPointQuad.col != 0) {
+    if ((index === data.length) && selectedPointQuad.col !== 0) {
         button.remove();
         updateLastInfo();
         svg.selectAll(".ring").remove();
@@ -213,11 +213,7 @@ function intersects(x1, y1, x2, y2, cx, cy, r) {
         var disSqrt = Math.sqrt(dis);
         var t1 = (-b - disSqrt) / (2 * a);
         var t2 = (-b + disSqrt) / (2 * a);
-        if ((t1 >= 0 && t1 <= 1) || (t2 >= 0 && t2 <= 1)) {
-            return true;
-        } else {
-            return false;
-        }
+        return (t1 >= 0 && t1 <= 1) || (t2 >= 0 && t2 <= 1);
     }
 }
 
@@ -227,7 +223,7 @@ function distance(point1, point2) {
     return Math.sqrt(dx * dx + dy * dy);
 }
 
-function calculateRingRadius(point, d) {
+function calculateRingRadius(d) {
     if (useLongestEdge) {
         return d * longestEdgeLength;
     } else {
