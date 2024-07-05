@@ -12,12 +12,13 @@ const maxX = 500;
 const maxY = 500;
 const width = 550;
 const height = 550;
-var dist = 2;
+var dist;
 
 document.getElementById('applySettings').addEventListener('click', function() {
     var edgeLengthOption = document.getElementById('edgeLengthOption').value;
     useLongestEdge = (edgeLengthOption === 'longest');
     outsideCircle = document.getElementById('outsideCircle').value === 'true';
+    dist = parseInt(document.getElementById('distanceInput').value, 10);
     document.querySelector('.settings-container').style.display = 'none';
     document.getElementById('allButton').style.display = 'block';
     initialSettings();

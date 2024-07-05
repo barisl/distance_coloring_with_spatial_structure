@@ -89,6 +89,9 @@
             display: block;
             margin-bottom: 10px;
         }
+        .d-input {
+            width: 40px;
+        }
     </style>
 </head>
 <body>
@@ -108,7 +111,11 @@
             <option value="false">Nein</option>
         </select>
     </label>
-    <button id="applySettings">Einstellungen anwenden</button>
+    <label>
+        <span>Distanz d:</span>
+        <input type="number" class="d-input" id="distanceInput" value="1" min="1">
+    </label>
+    <button id="applySettings">anwenden</button>
 </div>
 <div class="container">
     <svg id="svg-container" transform="scale(1,-1)"></svg>
