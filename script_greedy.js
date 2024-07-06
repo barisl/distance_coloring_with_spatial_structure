@@ -88,8 +88,10 @@ function distanceColoring() {
 
     svg.selectAll(".point")
         .style("fill", function(d) { return getColor(d.col); });
-
-    updateLastInfo();
+    if(i === data.length) {
+        button.remove();
+        updateLastInfo();
+    }
 }
 function getColor(col) {
     if (colorMap[col]) {

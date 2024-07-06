@@ -69,6 +69,10 @@
             stroke: red;
             stroke-width: 2;
         }
+        .grid-line {
+            stroke: white;
+            stroke-width: 1;
+        }
         #allButton {
             margin-top: 20px;
         }
@@ -107,9 +111,9 @@
     <label>
         <span>Algorithmus wählen:</span>
         <select id="algorithmOption">
-            <option value="script_quadtree.js" selected>Quadtree</option>
-            <option value="script_greedy.js">Greedy</option>
+            <option value="script_greedy.js" selected>Greedy</option>
             <option value="script_grid.js">Grid</option>
+            <option value="script_quadtree.js">Quadtree</option>
         </select>
     </label>
     <label>
@@ -118,14 +122,14 @@
     </label>
     <label>
         <span>Welche Kantelänge verwenden:</span>
-        <select id="edgeLengthOption" class="optional-setting">
+        <select id="edgeLengthOption" class="optional-setting1">
             <option value="longest" selected>Längste Kante</option>
             <option value="average">Durchschnittliche Kante</option>
         </select>
     </label>
     <label>
         <span>Punkte außerhalb Kreis berücksichtigen:</span>
-        <select id="outsideCircle" class="optional-setting">
+        <select id="outsideCircle" class="optional-setting2">
             <option value="true" selected>Ja</option>
             <option value="false">Nein</option>
         </select>
@@ -155,12 +159,19 @@
 
     function toggleOptionalSettings() {
         const algorithmOption = document.getElementById('algorithmOption').value;
-        const optionalSettings = document.querySelectorAll('.optional-setting');
-        const isDisabled = algorithmOption === 'script_greedy.js' || algorithmOption === 'script_grid.js';
+        const optionalSetting1 = document.querySelector('.optional-setting1');
+        const optionalSetting2 = document.querySelector('.optional-setting2');
 
-        optionalSettings.forEach(setting => {
-            setting.disabled = isDisabled;
-        });
+        if (algorithmOption === 'script_greedy.js') {
+            optionalSetting1.disabled = true;
+            optionalSetting2.disabled = true;
+        } else if (algorithmOption === 'script_grid.js') {
+            optionalSetting1.disabled = false;
+            optionalSetting2.disabled = true;
+        } else {
+            optionalSetting1.disabled = false;
+            optionalSetting2.disabled = false;
+        }
     }
 
     document.getElementById('algorithmOption').addEventListener('change', toggleOptionalSettings);
