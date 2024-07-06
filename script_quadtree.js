@@ -1,5 +1,5 @@
 var infoContainer = document.getElementById('infoContainer');
-var svg, quadtree, longestEdgeLength, averageEdgeLength, selectedPointQuad, pathMatrix;
+var svg, quadtree, longestEdgeLength, averageEdgeLength, selectedPointQuad, pathMatrix,csvFile;
 var useLongestEdge = true;
 var outsideCircle = true;
 var sumEdgeLength = 0;
@@ -14,18 +14,17 @@ const width = 550;
 const height = 550;
 var dist;
 
-document.getElementById('applySettings').addEventListener('click', function() {
     var edgeLengthOption = document.getElementById('edgeLengthOption').value;
+    csvFile = document.getElementById('csvFileOption').value;
     useLongestEdge = (edgeLengthOption === 'longest');
     outsideCircle = document.getElementById('outsideCircle').value === 'true';
     dist = parseInt(document.getElementById('distanceInput').value, 10);
     document.querySelector('.settings-container').style.display = 'none';
     document.getElementById('allButton').style.display = 'block';
     initialSettings();
-});
 
 function initialSettings() {
-    d3.csv("graph_example.csv", function(csvData) {
+    d3.csv(csvFile, function(csvData) {
         let isSourceTarget = false;
         csvData.forEach(function(d) {
             if(!isSourceTarget) {
@@ -115,87 +114,88 @@ function initialSettings() {
 var index = 0;
 var prevPoint = null;
 var button = document.getElementById('allButton');
-button.addEventListener('click', drawNextCircle);
+button.addEventListener('click', distanceColoring);
 
-function drawNextCircle() {
-    if (prevPoint) {
-        prevPoint.point.remove();
-        prevPoint.ring.remove();
-        svg.selectAll(".longest-edge").remove();
-        svg.selectAll(".neighbor-point").remove();
-        svg.selectAll(".intersect-point").remove();
-        neighbor_col = [];
-    }
-
-    var selectedPoint = data[index];
-    var point = svg.append("circle")
-        .attr("class", "point central-point")
-        .attr("cx", selectedPoint.x)
-        .attr("cy", selectedPoint.y)
-        .attr("r", 3)
-        .style("fill", getColor(selectedPoint.col));
-
-    var ringRadius = calculateRingRadius(dist);
-    var ring = svg.append("circle")
-        .attr("class", "ring")
-        .attr("cx", selectedPoint.x)
-        .attr("cy", selectedPoint.y)
-        .attr("r", ringRadius);
-
-    quadtree.visit(function (quad, x1, y1, x2, y2) {
-        if (quad.point) {
-            var quadPoint = quad.point;
-            var quadPointX = quadPoint[0];
-            var quadPointY = quadPoint[1];
-            var quadUp = intersects(x1, y1, x2, y1, selectedPoint.x, selectedPoint.y, ringRadius);
-            var quadRight = intersects(x2, y1, x2, y2, selectedPoint.x, selectedPoint.y, ringRadius);
-            var quadDown = intersects(x2, y2, x1, y2, selectedPoint.x, selectedPoint.y, ringRadius);
-            var quadLeft = intersects(x2, y2, x1, y1, selectedPoint.x, selectedPoint.y, ringRadius);
-            var dist = distance(selectedPoint, {x: quadPointX, y: quadPointY});
-
-            if (dist === 0) {
-                selectedPointQuad = quad.point;
-            }
-            if(outsideCircle){
-                if ((dist <= ringRadius || (quadUp || quadRight || quadDown || quadLeft)) && dist !== 0) {
-                    neighbor_col.push(quad.point.col);
-                }
-            }
-            else{
-                if (dist <= ringRadius && dist !== 0) {
-                    neighbor_col.push(quad.point.col);
-                }
-            }
+function distanceColoring() {
+    for (var i = 0; i < data.length; i++) {
+        if (prevPoint) {
+            prevPoint.point.remove();
+            prevPoint.ring.remove();
+            svg.selectAll(".longest-edge").remove();
+            svg.selectAll(".neighbor-point").remove();
+            svg.selectAll(".intersect-point").remove();
+            neighbor_col = [];
         }
-        return x1 >= selectedPoint.x + ringRadius || x2 <= selectedPoint.x - ringRadius ||
-            y1 >= selectedPoint.y + ringRadius || y2 <= selectedPoint.y - ringRadius;
-    });
 
-    var minAvailableColor = 1;
-    while (neighbor_col.includes(minAvailableColor)) {
-        minAvailableColor++;
-    }
-    selectedPoint.col = minAvailableColor;
-    selectedPointQuad.col = minAvailableColor;
-    svg.append("circle")
-        .attr("class", "point central-point")
-        .attr("cx", selectedPoint.x)
-        .attr("cy", selectedPoint.y)
-        .attr("r", 3)
-        .style("fill", getColor(selectedPoint.col))
-    if (!total_col.includes(selectedPoint.col) || !total_col.includes(selectedPointQuad.col)) {
-        total_col.push(selectedPointQuad.col);
-    }
-    index++;
-    updateInfo();
-    if ((index === data.length) && selectedPointQuad.col !== 0) {
-        button.remove();
-        updateLastInfo();
-        svg.selectAll(".ring").remove();
-    }
-    prevPoint = {
-        point: point,
-        ring: ring
+        var selectedPoint = data[index];
+        var point = svg.append("circle")
+            .attr("class", "point central-point")
+            .attr("cx", selectedPoint.x)
+            .attr("cy", selectedPoint.y)
+            .attr("r", 3)
+            .style("fill", getColor(selectedPoint.col));
+
+        var ringRadius = calculateRingRadius(dist);
+        var ring = svg.append("circle")
+            .attr("class", "ring")
+            .attr("cx", selectedPoint.x)
+            .attr("cy", selectedPoint.y)
+            .attr("r", ringRadius);
+
+        quadtree.visit(function (quad, x1, y1, x2, y2) {
+            if (quad.point) {
+                var quadPoint = quad.point;
+                var quadPointX = quadPoint[0];
+                var quadPointY = quadPoint[1];
+                var quadUp = intersects(x1, y1, x2, y1, selectedPoint.x, selectedPoint.y, ringRadius);
+                var quadRight = intersects(x2, y1, x2, y2, selectedPoint.x, selectedPoint.y, ringRadius);
+                var quadDown = intersects(x2, y2, x1, y2, selectedPoint.x, selectedPoint.y, ringRadius);
+                var quadLeft = intersects(x2, y2, x1, y1, selectedPoint.x, selectedPoint.y, ringRadius);
+                var dist = distance(selectedPoint, {x: quadPointX, y: quadPointY});
+
+                if (dist === 0) {
+                    selectedPointQuad = quad.point;
+                }
+                if (outsideCircle) {
+                    if ((dist <= ringRadius || (quadUp || quadRight || quadDown || quadLeft)) && dist !== 0) {
+                        neighbor_col.push(quad.point.col);
+                    }
+                } else {
+                    if (dist <= ringRadius && dist !== 0) {
+                        neighbor_col.push(quad.point.col);
+                    }
+                }
+            }
+            return x1 >= selectedPoint.x + ringRadius || x2 <= selectedPoint.x - ringRadius ||
+                y1 >= selectedPoint.y + ringRadius || y2 <= selectedPoint.y - ringRadius;
+        });
+
+        var minAvailableColor = 1;
+        while (neighbor_col.includes(minAvailableColor)) {
+            minAvailableColor++;
+        }
+        selectedPoint.col = minAvailableColor;
+        selectedPointQuad.col = minAvailableColor;
+        svg.append("circle")
+            .attr("class", "point central-point")
+            .attr("cx", selectedPoint.x)
+            .attr("cy", selectedPoint.y)
+            .attr("r", 3)
+            .style("fill", getColor(selectedPoint.col))
+        if (!total_col.includes(selectedPoint.col) || !total_col.includes(selectedPointQuad.col)) {
+            total_col.push(selectedPointQuad.col);
+        }
+        index++;
+        updateInfo();
+        if ((index === data.length) && selectedPointQuad.col !== 0) {
+            button.remove();
+            updateLastInfo();
+            svg.selectAll(".ring").remove();
+        }
+        prevPoint = {
+            point: point,
+            ring: ring
+        }
     }
 }
 

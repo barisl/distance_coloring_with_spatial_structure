@@ -98,22 +98,37 @@
 <div class="settings-container">
     <h2>Menü</h2>
     <label>
+        <span>CSV-Datei wählen:</span>
+        <select id="csvFileOption">
+            <option value="graph_example.csv" selected>graph_example.csv</option>
+            <option value="minnesota.csv">minnesota.csv</option>
+        </select>
+    </label>
+    <label>
+        <span>Algorithmus wählen:</span>
+        <select id="algorithmOption">
+            <option value="script_quadtree.js" selected>Quadtree</option>
+            <option value="script_greedy.js">Greedy</option>
+            <option value="script_grid.js">Grid</option>
+        </select>
+    </label>
+    <label>
+        <span>Distanz d:</span>
+        <input type="number" class="d-input" id="distanceInput" value="1" min="1">
+    </label>
+    <label>
         <span>Welche Kantelänge verwenden:</span>
-        <select id="edgeLengthOption">
+        <select id="edgeLengthOption" class="optional-setting">
             <option value="longest" selected>Längste Kante</option>
             <option value="average">Durchschnittliche Kante</option>
         </select>
     </label>
     <label>
         <span>Punkte außerhalb Kreis berücksichtigen:</span>
-        <select id="outsideCircle">
+        <select id="outsideCircle" class="optional-setting">
             <option value="true" selected>Ja</option>
             <option value="false">Nein</option>
         </select>
-    </label>
-    <label>
-        <span>Distanz d:</span>
-        <input type="number" class="d-input" id="distanceInput" value="1" min="1">
     </label>
     <button id="applySettings">anwenden</button>
 </div>
@@ -125,6 +140,37 @@
     <div id="infoContainer"></div>
 </div>
 <script src="https://d3js.org/d3.v3.min.js"></script>
-<script src="script.js"></script>
+<script>
+    function loadScript(scriptUrl) {
+        const existingScript = document.getElementById('algorithmScript');
+        if (existingScript) {
+            existingScript.remove();
+        }
+
+        const script = document.createElement('script');
+        script.id = 'algorithmScript';
+        script.src = scriptUrl;
+        document.body.appendChild(script);
+    }
+
+    function toggleOptionalSettings() {
+        const algorithmOption = document.getElementById('algorithmOption').value;
+        const optionalSettings = document.querySelectorAll('.optional-setting');
+        const isDisabled = algorithmOption === 'script_greedy.js' || algorithmOption === 'script_grid.js';
+
+        optionalSettings.forEach(setting => {
+            setting.disabled = isDisabled;
+        });
+    }
+
+    document.getElementById('algorithmOption').addEventListener('change', toggleOptionalSettings);
+
+    document.getElementById('applySettings').addEventListener('click', function () {
+        const algorithmOption = document.getElementById('algorithmOption').value;
+        loadScript(algorithmOption);
+    });
+
+    toggleOptionalSettings();
+</script>
 </body>
 </html>
