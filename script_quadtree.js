@@ -302,9 +302,19 @@ function updateLastInfo() {
                 <p>p = ${wrongPaths(data, pathMatrix, svg, dist)}</p>
             `;
 }
-
-function calculatePaths(data, edges) {
+function calculateAdjacencyList(data, edges){
     const adjacencyList = new Array(data.length).fill().map(() => []);
+    for (var edge of edges) {
+        const { source, target } = edge;
+        const sourceIndex = data.findIndex(node => node.vertex === source);
+        const targetIndex = data.findIndex(node => node.vertex === target);
+        adjacencyList[sourceIndex].push(targetIndex);
+        adjacencyList[targetIndex].push(sourceIndex);
+    }
+    return adjacencyList;
+}
+function calculatePaths(data, edges) {
+    const adjacencyList = calculateAdjacencyList(data,edges);
     for (var edge of edges) {
         const { source, target } = edge;
         const sourceIndex = data.findIndex(node => node.vertex === source);

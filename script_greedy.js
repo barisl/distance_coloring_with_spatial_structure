@@ -66,32 +66,53 @@ function initialSettings() {
             .attr("cx", function (d) {return d.x;})
             .attr("cy", function (d) {return d.y;})
             .attr("r", 3);
-        pathMatrix = calculatePaths(data,edges);
+        pathMatrix = calculatePaths(data, edges, dist);
     });
 }
 function distanceColoring() {
     data.forEach(node => {
         node.col = 0;
     });
+    const adjacencyList = calculateAdjacencyList(data,edges);
+    function getNeighbors(nodeIndex) {
+        const neighbors = new Set();
+        const queue = [{ node: nodeIndex, depth: 0 }];
+        const visited = new Set();
+        visited.add(nodeIndex);
 
-    for (var i = 0; i < data.length; i++) {
-        var currentNode = data[i];
-        var neighbors = data.filter((node, j) => node !== currentNode && pathMatrix[i][j] <= dist);
-        var neighborColors = neighbors.map(node => node.col);
+        while (queue.length > 0) {
+            const { node: currentNode, depth } = queue.shift();
+            if (depth >= dist) continue;
 
+            adjacencyList[currentNode].forEach(neighbor => {
+                if (!visited.has(neighbor)) {
+                    visited.add(neighbor);
+                    queue.push({ node: neighbor, depth: depth + 1 });
+                    neighbors.add(neighbor);
+                }
+            });
+        }
+        return neighbors;
+    }
+    data.forEach((node, index) => {
+        const neighbors = getNeighbors(index);
+        const usedColors = new Set();
+        neighbors.forEach(neighbor => {
+            const neighborColor = data[neighbor].col;
+            if (neighborColor > 0) {
+                usedColors.add(neighborColor);
+            }
+        });
         var color = 1;
-        while (neighborColors.includes(color)) {
+        while (usedColors.has(color)) {
             color++;
         }
-        currentNode.col = color;
-    }
-
+        node.col = color;
+    });
     svg.selectAll(".point")
-        .style("fill", function(d) { return getColor(d.col); });
-    if(i === data.length) {
-        button.remove();
-        updateLastInfo();
-    }
+        .style("fill", d => getColor(d.col));
+    button.remove();
+    updateLastInfo();
 }
 function getColor(col) {
     if (colorMap[col]) {
@@ -114,7 +135,7 @@ function updateLastInfo() {
         <p>p = ${wrongPaths(data, pathMatrix, svg, dist)}</p>
     `;
 }
-function calculatePaths(data, edges) {
+function calculateAdjacencyList(data,edges){
     const adjacencyList = new Array(data.length).fill().map(() => []);
     for (var edge of edges) {
         const { source, target } = edge;
@@ -123,27 +144,26 @@ function calculatePaths(data, edges) {
         adjacencyList[sourceIndex].push(targetIndex);
         adjacencyList[targetIndex].push(sourceIndex);
     }
-    const calculatePathsMatrix = [];
+    return adjacencyList;
+}
+function calculatePaths(data, edges, dist) {
+    const adjacencyList = calculateAdjacencyList(data,edges);
+    const pathMatrix = Array.from({ length: data.length }, () => Array(data.length).fill(Infinity));
     for (var i = 0; i < data.length; i++) {
-        const row = new Array(data.length).fill(Infinity);
-        row[i] = 0;
-        const queue = [i];
-        const visited = new Array(data.length).fill(false);
-        visited[i] = true;
+        pathMatrix[i][i] = 0;
+        const queue = [{ node: i, depth: 0 }];
         while (queue.length > 0) {
-            const currentNode = queue.shift();
-            const currentDistance = row[currentNode];
+            const { node: currentNode, depth } = queue.shift();
+            if (depth >= dist) continue;
             for (var neighbor of adjacencyList[currentNode]) {
-                if (!visited[neighbor]) {
-                    row[neighbor] = currentDistance + 1;
-                    queue.push(neighbor);
-                    visited[neighbor] = true;
+                if (pathMatrix[i][neighbor] > depth + 1) {
+                    pathMatrix[i][neighbor] = depth + 1;
+                    queue.push({ node: neighbor, depth: depth + 1 });
                 }
             }
         }
-        calculatePathsMatrix.push(row);
     }
-    return calculatePathsMatrix;
+    return pathMatrix;
 }
 function wrongPaths(data, pathMatrix, svg, dist) {
     var count = 0;
@@ -153,7 +173,6 @@ function wrongPaths(data, pathMatrix, svg, dist) {
                 count++;
                 const sourceNode = data[i];
                 const targetNode = data[j];
-                //console.log("Source:", sourceNode, "Target:", targetNode);
                 svg.append("line")
                     .attr("class", "wrong-path")
                     .attr("x1", sourceNode.x)

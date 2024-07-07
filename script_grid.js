@@ -51,12 +51,8 @@ function initialSettings() {
 
         for (var i = 0; i < edges.length; i++) {
             var edge = edges[i];
-            var sourceNode = data.find(function (node) {
-                return node.vertex === edge.source;
-            });
-            var targetNode = data.find(function (node) {
-                return node.vertex === edge.target;
-            });
+            var sourceNode = data.find(function (node) {return node.vertex === edge.source;});
+            var targetNode = data.find(function (node) {return node.vertex === edge.target;});
             var edgeLength = distance(sourceNode, targetNode);
             sumEdgeLength += edgeLength;
             if (edgeLength > longestEdgeLength) {
@@ -107,11 +103,9 @@ function initialSettings() {
     });
 }
 function gridColoring() {
-    data.forEach(node => {
-        node.col = 0;
-    });
     const grid = {};
     data.forEach(node => {
+        node.col = 0;
         const gridX = Math.floor(node.x / gridSize);
         const gridY = Math.floor(node.y / gridSize);
         const key = `${gridX}-${gridY}`;
@@ -120,38 +114,35 @@ function gridColoring() {
         }
         grid[key].push(node);
     });
-
     Object.values(grid).forEach(cell => {
         cell.forEach(node => {
             const neighbors = getNeighbors(node, grid);
-            const neighborColors = neighbors.map(n => n.col);
-
+            const neighborColors = new Set(neighbors.map(n => n.col));
             let color = 1;
-            while (neighborColors.includes(color)) {
+            while (neighborColors.has(color)) {
                 color++;
             }
             node.col = color;
         });
     });
-
     svg.selectAll(".point")
         .style("fill", function(d) { return getColor(d.col); });
-
     button.remove();
     updateLastInfo();
+    svg.selectAll(".longest-edge").remove();
 }
 function getNeighbors(node, grid) {
     const gridX = Math.floor(node.x / gridSize);
     const gridY = Math.floor(node.y / gridSize);
-
     const neighbors = [];
-
-    for (let i = gridX - dist; i <= gridX + dist; i++) {
-        for (let j = gridY - dist; j <= gridY + dist; j++) {
+    svg.selectAll(".search-cell").remove();
+    for (var i = gridX - dist; i <= gridX + dist; i++) {
+        for (var j = gridY - dist; j <= gridY + dist; j++) {
+            drawGridCell(i, j, "red");
             const key = `${i}-${j}`;
             if (grid[key]) {
                 grid[key].forEach(neighbor => {
-                    if (neighbor !== node && pathMatrix[data.indexOf(node)][data.indexOf(neighbor)] <= dist) {
+                    if (neighbor !== node && pathMatrix[data.indexOf(node)][data.indexOf(neighbor)] <= dist*gridSize) {
                         neighbors.push(neighbor);
                     }
                 });
@@ -160,6 +151,17 @@ function getNeighbors(node, grid) {
     }
 
     return neighbors;
+}
+function drawGridCell(gridX, gridY, color) {
+    svg.append("rect")
+        .attr("class", "search-cell")
+        .attr("x", gridX * gridSize)
+        .attr("y", gridY * gridSize)
+        .attr("width", gridSize)
+        .attr("height", gridSize)
+        .attr("fill", "none")
+        .attr("stroke", color)
+        .attr("stroke-width", 2);
 }
 function distance(point1, point2) {
     var dx = point2.x - point1.x;
@@ -195,7 +197,7 @@ function updateLastInfo() {
         <p>p = ${wrongPaths(data, pathMatrix, svg, dist)}</p>
     `;
 }
-function calculatePaths(data, edges) {
+function calculateAdjacencyList(data, edges){
     const adjacencyList = new Array(data.length).fill().map(() => []);
     for (var edge of edges) {
         const { source, target } = edge;
@@ -204,6 +206,10 @@ function calculatePaths(data, edges) {
         adjacencyList[sourceIndex].push(targetIndex);
         adjacencyList[targetIndex].push(sourceIndex);
     }
+    return adjacencyList;
+}
+function calculatePaths(data, edges) {
+    const adjacencyList = calculateAdjacencyList(data,edges);
     const calculatePathsMatrix = [];
     for (var i = 0; i < data.length; i++) {
         const row = new Array(data.length).fill(Infinity);
