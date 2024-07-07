@@ -190,7 +190,6 @@ function distanceColoring() {
         if ((index === data.length) && selectedPointQuad.col !== 0) {
             button.remove();
             updateLastInfo();
-            svg.selectAll(".ring").remove();
         }
         prevPoint = {
             point: point,
