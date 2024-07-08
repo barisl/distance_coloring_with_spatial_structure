@@ -8,6 +8,7 @@ var edges = [];
 var total_col = [];
 var neighbor_col = [];
 var colorMap = {};
+var vertexMap = {};
 const maxX = 500;
 const maxY = 500;
 const width = 550;
@@ -31,7 +32,9 @@ function initialSettings() {
                 if(d.vertex === "source"){
                     isSourceTarget = true;
                 } else {
-                    data.push({vertex: d.vertex, x: +d.x, y: +d.y});
+                    let point = {vertex: d.vertex, x: +d.x, y: +d.y};
+                    data.push(point);
+                    vertexMap[d.vertex] = point;
                 }
             } else {
                 edges.push({ source: d.vertex, target: d.x });
@@ -52,20 +55,15 @@ function initialSettings() {
 
         for (var i = 0; i < edges.length; i++) {
             var edge = edges[i];
-            var sourceNode = data.find(function (node) {
-                return node.vertex === edge.source;
-            });
-            var targetNode = data.find(function (node) {
-                return node.vertex === edge.target;
-            });
+            var sourceNode = vertexMap[edge.source];
+            var targetNode = vertexMap[edge.target];
             var edgeLength = distance(sourceNode, targetNode);
             sumEdgeLength += edgeLength;
             if (edgeLength > longestEdgeLength) {
                 longestEdgeLength = edgeLength;
-                longestEdge = edge
+                longestEdge = edge;
             }
         }
-
         quadtree = d3.geom.quadtree().extent([[-1, -1], [height, width]])(data.map(d => [d.x, d.y]));
 
         svg = d3.select("#svg-container")
