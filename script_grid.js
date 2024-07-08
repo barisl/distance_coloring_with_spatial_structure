@@ -22,6 +22,7 @@ initialSettings();
 var button = document.getElementById('allButton');
 button.addEventListener('click', gridColoring);
 
+// Function to initialize the settings and load the CSV data.
 function initialSettings() {
     d3.csv(csvFile, function(csvData) {
         let isSourceTarget = false;
@@ -38,7 +39,7 @@ function initialSettings() {
                 edges.push({ source: d.vertex, target: d.x });
             }
         });
-
+        // Normalize the coordinates to fit within the maxX and maxY dimensions
         let min_x = d3.min(data.map(d => d.x));
         let min_y = d3.min(data.map(d => d.y));
         let max_x = d3.max(data.map(d => d.x));
@@ -51,7 +52,7 @@ function initialSettings() {
 
         longestEdgeLength = 0;
         var longestEdge = null;
-
+        // Compute the longest edge length and sum of all edge lengths
         for (var i = 0; i < edges.length; i++) {
             var edge = edges[i];
             var sourceNode = vertexMap[edge.source];
@@ -94,8 +95,8 @@ function initialSettings() {
             .attr("cx", function (d) { return d.x; })
             .attr("cy", function (d) { return d.y; })
             .attr("r", 3);
-        pathMatrix = calculatePaths(data, edges);
-        rectSize = calculateGridSize(dist);
+        pathMatrix = calculatePaths(data, edges);   // Compute the path matrix for the graph
+        rectSize = calculateGridSize(dist); // Compute the size of each grid cell
         if(useLongestEdge){
             gridSize = longestEdgeLength;
         }
@@ -105,6 +106,7 @@ function initialSettings() {
         drawGridLines(gridSize);
     });
 }
+// Function to perform the graph coloring based on the grid
 function gridColoring() {
     const grid = {};
     data.forEach(node => {
@@ -117,15 +119,16 @@ function gridColoring() {
         }
         grid[key].push(node);
     });
+    // Iterate over each grid cell to assign colors to the nodes
     Object.values(grid).forEach(cell => {
         cell.forEach(node => {
-            const neighbors = getNeighbors(node, grid);
-            const neighborColors = new Set(neighbors.map(n => n.col));
-            let color = 1;
-            while (neighborColors.has(color)) {
-                color++;
+            const neighbors = getNeighbors(node, grid); // Get the neighboring nodes within the distance
+            const neighbor_col = new Set(neighbors.map(n => n.col)); // Collect colors of neighboring nodes
+            let minAvailableColor = 1;
+            while (neighbor_col.has(minAvailableColor)) {
+                minAvailableColor++;
             }
-            node.col = color;
+            node.col = minAvailableColor;
         });
     });
     svg.selectAll(".point")
@@ -134,6 +137,7 @@ function gridColoring() {
     updateLastInfo();
     svg.selectAll(".longest-edge").remove();
 }
+// Function to get the neighbors of a node within distance d
 function getNeighbors(node, grid) {
     const gridX = Math.floor(node.x / gridSize);
     const gridY = Math.floor(node.y / gridSize);
@@ -152,9 +156,9 @@ function getNeighbors(node, grid) {
             }
         }
     }
-
     return neighbors;
 }
+// Function to draw a grid cell on the SVG
 function drawGridCell(gridX, gridY, color) {
     svg.append("rect")
         .attr("class", "search-cell")
@@ -166,11 +170,13 @@ function drawGridCell(gridX, gridY, color) {
         .attr("stroke", color)
         .attr("stroke-width", 2);
 }
+// Function to calculate the Euclidean distance between two points
 function distance(point1, point2) {
     var dx = point2.x - point1.x;
     var dy = point2.y - point1.y;
     return Math.sqrt(dx * dx + dy * dy);
 }
+// Function to calculate the grid size based on the distance d
 function calculateGridSize(d) {
     if (useLongestEdge) {
         return d * longestEdgeLength;
@@ -179,13 +185,14 @@ function calculateGridSize(d) {
         return d * averageEdgeLength;
     }
 }
+// Function to generate a color for each color index
 function getColor(col) {
     if (colorMap[col]) {
         return colorMap[col];
     } else {
-        const letters = '0123456789ABCDEF';
-        let color = '#';
-        for (let i = 0; i < 6; i++) {
+        var letters = '0123456789ABCDEF';
+        var color = '#';
+        for (var i = 0; i < 6; i++) {
             color += letters[Math.floor(Math.random() * 16)];
         }
         colorMap[col] = color;
@@ -200,6 +207,7 @@ function updateLastInfo() {
         <p>p = ${wrongPaths(data, pathMatrix, svg, dist)}</p>
     `;
 }
+// Function to calculate the adjacency list for the graph
 function calculateAdjacencyList(data, edges){
     const adjacencyList = new Array(data.length).fill().map(() => []);
     for (var edge of edges) {
@@ -211,6 +219,7 @@ function calculateAdjacencyList(data, edges){
     }
     return adjacencyList;
 }
+// Function to compute the shortest paths matrix for all pairs of nodes
 function calculatePaths(data, edges) {
     const adjacencyList = calculateAdjacencyList(data,edges);
     const calculatePathsMatrix = [];
@@ -235,6 +244,7 @@ function calculatePaths(data, edges) {
     }
     return calculatePathsMatrix;
 }
+// Function to count and highlight incorrect paths that violate the distance constraint
 function wrongPaths(data, pathMatrix, svg, dist) {
     var count = 0;
     for (var i = 0; i < data.length; i++) {
@@ -266,6 +276,7 @@ function wrongPaths(data, pathMatrix, svg, dist) {
     }
     return count;
 }
+// Function to draw the grid lines on the SVG
 function drawGridLines(gridSize) {
     svg.selectAll('.grid-line').remove();
     for (let x = 0; x <= width; x += gridSize) {

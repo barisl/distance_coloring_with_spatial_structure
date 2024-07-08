@@ -1,5 +1,5 @@
 var infoContainer = document.getElementById('infoContainer');
-var svg, quadtree, longestEdgeLength, averageEdgeLength, selectedPointQuad, pathMatrix,csvFile;
+var svg, quadtree, longestEdgeLength, averageEdgeLength, selectedPointQuad, pathMatrix,csvFile,dist,edgeLengthOption;
 var useLongestEdge = true;
 var outsideCircle = true;
 var sumEdgeLength = 0;
@@ -13,17 +13,18 @@ const maxX = 500;
 const maxY = 500;
 const width = 550;
 const height = 550;
-var dist;
 
-    var edgeLengthOption = document.getElementById('edgeLengthOption').value;
-    csvFile = document.getElementById('csvFileOption').value;
-    useLongestEdge = (edgeLengthOption === 'longest');
-    outsideCircle = document.getElementById('outsideCircle').value === 'true';
-    dist = parseInt(document.getElementById('distanceInput').value, 10);
-    document.querySelector('.settings-container').style.display = 'none';
-    document.getElementById('allButton').style.display = 'block';
-    initialSettings();
+// Initialize distance and CSV file based on user input
+edgeLengthOption = document.getElementById('edgeLengthOption').value;
+csvFile = document.getElementById('csvFileOption').value;
+useLongestEdge = (edgeLengthOption === 'longest');
+outsideCircle = document.getElementById('outsideCircle').value === 'true';
+dist = parseInt(document.getElementById('distanceInput').value, 10);
+document.querySelector('.settings-container').style.display = 'none';
+document.getElementById('allButton').style.display = 'block';
+initialSettings();
 
+// Function to initialize the settings, load the CSV data, and set up the quadtree
 function initialSettings() {
     d3.csv(csvFile, function(csvData) {
         let isSourceTarget = false;
@@ -40,6 +41,7 @@ function initialSettings() {
                 edges.push({ source: d.vertex, target: d.x });
             }
         });
+        // Normalize the coordinates to fit within the maxX and maxY dimensions
         let min_x = d3.min(data.map(d => d.x));
         let min_y = d3.min(data.map(d => d.y));
         let max_x = d3.max(data.map(d => d.x));
@@ -52,7 +54,7 @@ function initialSettings() {
 
         longestEdgeLength = 0;
         var longestEdge = null;
-
+        // Compute the longest edge length and sum of all edge lengths
         for (var i = 0; i < edges.length; i++) {
             var edge = edges[i];
             var sourceNode = vertexMap[edge.source];
@@ -64,6 +66,7 @@ function initialSettings() {
                 longestEdge = edge;
             }
         }
+        // Create the quadtree for spatial indexing of points
         quadtree = d3.geom.quadtree().extent([[-1, -1], [height, width]])(data.map(d => [d.x, d.y]));
 
         svg = d3.select("#svg-container")
@@ -114,17 +117,15 @@ var prevPoint = null;
 var button = document.getElementById('allButton');
 button.addEventListener('click', distanceColoring);
 
+// Function to perform the distance coloring algorithm
 function distanceColoring() {
     for (var i = 0; i < data.length; i++) {
         if (prevPoint) {
             prevPoint.point.remove();
             prevPoint.ring.remove();
             svg.selectAll(".longest-edge").remove();
-            svg.selectAll(".neighbor-point").remove();
-            svg.selectAll(".intersect-point").remove();
             neighbor_col = [];
         }
-
         var selectedPoint = data[index];
         var point = svg.append("circle")
             .attr("class", "point central-point")
@@ -133,6 +134,7 @@ function distanceColoring() {
             .attr("r", 3)
             .style("fill", getColor(selectedPoint.col));
 
+        // Create the ring for distance calculations
         var ringRadius = calculateRingRadius(dist);
         var ring = svg.append("circle")
             .attr("class", "ring")
@@ -140,6 +142,7 @@ function distanceColoring() {
             .attr("cy", selectedPoint.y)
             .attr("r", ringRadius);
 
+        // Check all points in the quadtree to find neighbors
         quadtree.visit(function (quad, x1, y1, x2, y2) {
             if (quad.point) {
                 var quadPoint = quad.point;
@@ -164,10 +167,11 @@ function distanceColoring() {
                     }
                 }
             }
+            // Avoid traversing unnecessary parts of the quadtree
             return x1 >= selectedPoint.x + ringRadius || x2 <= selectedPoint.x - ringRadius ||
                 y1 >= selectedPoint.y + ringRadius || y2 <= selectedPoint.y - ringRadius;
         });
-
+        // Determine the smallest available color that is not used by neighbors
         var minAvailableColor = 1;
         while (neighbor_col.includes(minAvailableColor)) {
             minAvailableColor++;
@@ -195,7 +199,7 @@ function distanceColoring() {
         }
     }
 }
-
+// Function to check if the circle is within the quadrant
 function intersects(x1, y1, x2, y2, cx, cy, r) {
     var dx = x2 - x1;
     var dy = y2 - y1;
@@ -214,13 +218,13 @@ function intersects(x1, y1, x2, y2, cx, cy, r) {
         return (t1 >= 0 && t1 <= 1) || (t2 >= 0 && t2 <= 1);
     }
 }
-
+// Function to calculate the Euclidean distance between two points
 function distance(point1, point2) {
     var dx = point2.x - point1.x;
     var dy = point2.y - point1.y;
     return Math.sqrt(dx * dx + dy * dy);
 }
-
+// Function to calculate the radius of the ring based on the distance and edge length settings
 function calculateRingRadius(d) {
     if (useLongestEdge) {
         return d * longestEdgeLength;
@@ -229,7 +233,7 @@ function calculateRingRadius(d) {
         return d * averageEdgeLength;
     }
 }
-
+// Function to get all nodes from the quadtree and initialize color for each vertex
 function nodes(quadtree) {
     var nodes = [];
     quadtree.depth = 0;
@@ -250,7 +254,7 @@ function nodes(quadtree) {
     });
     return nodes;
 }
-
+// Function to generate a color for each color index
 function getColor(col) {
     if (colorMap[col]) {
         return colorMap[col];
@@ -299,6 +303,7 @@ function updateLastInfo() {
                 <p>p = ${wrongPaths(data, pathMatrix, svg, dist)}</p>
             `;
 }
+// Function to calculate the adjacency list for the graph
 function calculateAdjacencyList(data, edges){
     const adjacencyList = new Array(data.length).fill().map(() => []);
     for (var edge of edges) {
@@ -310,6 +315,7 @@ function calculateAdjacencyList(data, edges){
     }
     return adjacencyList;
 }
+// Function to compute the shortest paths matrix for all pairs of nodes
 function calculatePaths(data, edges) {
     const adjacencyList = calculateAdjacencyList(data,edges);
     for (var edge of edges) {
@@ -341,6 +347,7 @@ function calculatePaths(data, edges) {
     }
     return calculatePathsMatrix;
 }
+// Function to count and highlight incorrect paths that violate the distance constraint
 function wrongPaths(data, pathMatrix, svg, dist) {
     var count = 0;
     for (var i = 0; i < data.length; i++) {

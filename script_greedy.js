@@ -1,5 +1,5 @@
 var infoContainer = document.getElementById('infoContainer');
-var svg,pathMatrix,csvFile;
+var svg,pathMatrix,csvFile,button,dist;
 var data = [];
 var edges = [];
 var colorMap = {};
@@ -7,16 +7,17 @@ const maxX = 500;
 const maxY = 500;
 const width = 550;
 const height = 550;
-var dist;
 
+// Initialize distance and CSV file based on user input
 dist = parseInt(document.getElementById('distanceInput').value, 10);
 csvFile = document.getElementById('csvFileOption').value;
 document.querySelector('.settings-container').style.display = 'none';
 document.getElementById('allButton').style.display = 'block';
 initialSettings();
-var button = document.getElementById('allButton');
+button = document.getElementById('allButton');
 button.addEventListener('click', distanceColoring);
 
+// Function to initialize the settings and load the CSV data.
 function initialSettings() {
     d3.csv(csvFile, function(csvData) {
         let isSourceTarget = false;
@@ -31,7 +32,7 @@ function initialSettings() {
                 edges.push({ source: d.vertex, target: d.x });
             }
         });
-
+        // Normalize the coordinates to fit within the maxX and maxY dimensions
         let min_x = d3.min(data.map(d => d.x));
         let min_y = d3.min(data.map(d => d.y));
         let max_x = d3.max(data.map(d => d.x));
@@ -69,11 +70,14 @@ function initialSettings() {
         pathMatrix = calculatePaths(data, edges, dist);
     });
 }
+// Function to perform the distance coloring algorithm
 function distanceColoring() {
+    // initialize color for each vertex
     data.forEach(node => {
         node.col = 0;
     });
     const adjacencyList = calculateAdjacencyList(data,edges);
+    // Helper function to find neighbors within the distance limit
     function getNeighbors(nodeIndex) {
         const neighbors = new Set();
         const queue = [{ node: nodeIndex, depth: 0 }];
@@ -94,26 +98,29 @@ function distanceColoring() {
         }
         return neighbors;
     }
+    // find the neighbor color
     data.forEach((node, index) => {
         const neighbors = getNeighbors(index);
         const usedColors = new Set();
         neighbors.forEach(neighbor => {
-            const neighborColor = data[neighbor].col;
-            if (neighborColor > 0) {
-                usedColors.add(neighborColor);
+            const neighbor_col = data[neighbor].col;
+            if (neighbor_col > 0) {
+                usedColors.add(neighbor_col);
             }
         });
-        var color = 1;
-        while (usedColors.has(color)) {
-            color++;
+        // Determine the smallest available color that is not used by neighbors
+        var minAvailableColor = 1;
+        while (usedColors.has(minAvailableColor)) {
+            minAvailableColor++;
         }
-        node.col = color;
+        node.col = minAvailableColor;
     });
     svg.selectAll(".point")
         .style("fill", d => getColor(d.col));
     button.remove();
     updateLastInfo();
 }
+// Function to generate a color for each color index
 function getColor(col) {
     if (colorMap[col]) {
         return colorMap[col];
@@ -135,6 +142,7 @@ function updateLastInfo() {
         <p>p = ${wrongPaths(data, pathMatrix, svg, dist)}</p>
     `;
 }
+// Function to calculate the adjacency list for the graph
 function calculateAdjacencyList(data,edges){
     const adjacencyList = new Array(data.length).fill().map(() => []);
     for (var edge of edges) {
@@ -146,6 +154,7 @@ function calculateAdjacencyList(data,edges){
     }
     return adjacencyList;
 }
+// Function to compute the shortest paths matrix for all pairs of nodes
 function calculatePaths(data, edges, dist) {
     const adjacencyList = calculateAdjacencyList(data,edges);
     const pathMatrix = Array.from({ length: data.length }, () => Array(data.length).fill(Infinity));
@@ -165,6 +174,7 @@ function calculatePaths(data, edges, dist) {
     }
     return pathMatrix;
 }
+// Function to count and highlight incorrect paths that violate the distance constraint
 function wrongPaths(data, pathMatrix, svg, dist) {
     var count = 0;
     for (var i = 0; i < data.length; i++) {
