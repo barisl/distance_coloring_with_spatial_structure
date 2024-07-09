@@ -3,6 +3,7 @@ var svg,pathMatrix,csvFile,button,dist;
 var data = [];
 var edges = [];
 var colorMap = {};
+var vertexMap = {};
 const maxX = 500;
 const maxY = 500;
 const width = 550;
@@ -26,7 +27,9 @@ function initialSettings() {
                 if(d.vertex === "source"){
                     isSourceTarget = true;
                 } else {
-                    data.push({vertex: d.vertex, x: +d.x, y: +d.y});
+                    let point = {vertex: d.vertex, x: +d.x, y: +d.y};
+                    data.push(point);
+                    vertexMap[d.vertex] = point;
                 }
             } else {
                 edges.push({ source: d.vertex, target: d.x });
@@ -76,6 +79,7 @@ function distanceColoring() {
     data.forEach(node => {
         node.col = 0;
     });
+
     const adjacencyList = calculateAdjacencyList(data,edges);
     // Helper function to find neighbors within the distance limit
     function getNeighbors(nodeIndex) {
@@ -145,10 +149,10 @@ function updateLastInfo() {
 // Function to calculate the adjacency list for the graph
 function calculateAdjacencyList(data,edges){
     const adjacencyList = new Array(data.length).fill().map(() => []);
-    for (var edge of edges) {
-        const { source, target } = edge;
-        const sourceIndex = data.findIndex(node => node.vertex === source);
-        const targetIndex = data.findIndex(node => node.vertex === target);
+    for (var i = 0; i < edges.length; i++) {
+        var edge = edges[i];
+        var sourceIndex = data.indexOf(vertexMap[edge.source]);
+        var targetIndex = data.indexOf(vertexMap[edge.target]);
         adjacencyList[sourceIndex].push(targetIndex);
         adjacencyList[targetIndex].push(sourceIndex);
     }

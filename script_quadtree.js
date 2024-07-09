@@ -304,12 +304,12 @@ function updateLastInfo() {
             `;
 }
 // Function to calculate the adjacency list for the graph
-function calculateAdjacencyList(data, edges){
+function calculateAdjacencyList(data,edges){
     const adjacencyList = new Array(data.length).fill().map(() => []);
-    for (var edge of edges) {
-        const { source, target } = edge;
-        const sourceIndex = data.findIndex(node => node.vertex === source);
-        const targetIndex = data.findIndex(node => node.vertex === target);
+    for (var i = 0; i < edges.length; i++) {
+        var edge = edges[i];
+        var sourceIndex = data.indexOf(vertexMap[edge.source]);
+        var targetIndex = data.indexOf(vertexMap[edge.target]);
         adjacencyList[sourceIndex].push(targetIndex);
         adjacencyList[targetIndex].push(sourceIndex);
     }
