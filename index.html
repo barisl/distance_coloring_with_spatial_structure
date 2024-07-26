@@ -1,3 +1,14 @@
+<!--
+/****************************************/
+/* Baris Lök                           */
+/* Bachelorthesis - Informatik B. Sc. */
+/* Erstprüfer: Dr. Schweitzer        */
+/* Zweitprüfer: Prof. Dr. Frommer   */
+/* Version: 1.0                    */
+/* Datum: 10.07.2024              */
+/* Status: lauffaehig            */
+/********************************/
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,6 +16,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quadtree - Distance Coloring</title>
     <style>
+        /*
+         * CSS styles for the entire document.
+         * Defines layout, colors, and styles for various HTML elements.
+         */
         body, html {
             height: 100%;
             margin: 0;
@@ -49,14 +64,6 @@
             fill: darkgray;
             stroke: white;
         }
-        .neighbor-point {
-            fill: blue;
-            stroke: white;
-        }
-        .intersect-point {
-            fill: darkgray;
-            stroke: white;
-        }
         .edge {
             stroke: green;
             stroke-width: 2;
@@ -72,6 +79,11 @@
         .grid-line {
             stroke: white;
             stroke-width: 1;
+        }
+        .search-cell {
+            stroke: red;
+            stroke-width: 1;
+
         }
         #allButton {
             margin-top: 20px;
@@ -99,6 +111,10 @@
     </style>
 </head>
 <body>
+    <!--
+     * Menu container for the user.
+     * Allows the selection of CSV files, algorithms, and parameters.
+     -->
 <div class="settings-container">
     <h2>Menü</h2>
     <label>
@@ -130,19 +146,30 @@
     <label>
         <span>Punkte außerhalb Kreis berücksichtigen:</span>
         <select id="outsideCircle" class="optional-setting2">
-            <option value="true" selected>Ja</option>
-            <option value="false">Nein</option>
+            <option value="true">Ja</option>
+            <option value="false" selected>Nein</option>
         </select>
     </label>
     <button id="applySettings">anwenden</button>
 </div>
+        <!--
+         * Container for the SVG element.
+         * Here graphical representations are displayed.
+         -->
 <div class="container">
     <svg id="svg-container" transform="scale(1,-1)"></svg>
     <button id="allButton" style="display: none;">Start</button>
 </div>
+        <!--
+         * Info container for displaying information about the resulting colorings.
+         -->
 <div class="info-container">
     <div id="infoContainer"></div>
 </div>
+        <!--
+         * Script tag to load the D3.js library.
+         * Used for the creation and manipulation of the quadtree.
+         -->
 <script src="https://d3js.org/d3.v3.min.js"></script>
 <script>
     function loadScript(scriptUrl) {
@@ -156,6 +183,8 @@
         script.src = scriptUrl;
         document.body.appendChild(script);
     }
+
+    // Enables or disables optional settings based on the selected algorithm.
 
     function toggleOptionalSettings() {
         const algorithmOption = document.getElementById('algorithmOption').value;
